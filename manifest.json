@@ -1,0 +1,35 @@
+{
+  "name": "__MSG_extName__",
+  "description": "__MSG_extDescr__",
+  "version": "3.1.0",
+  "manifest_version": 3,
+  "default_locale": "en",
+  "permissions": [
+    "proxy",
+    "browsingData",
+    "storage",
+    "webRequest",
+    "webRequestAuthProvider"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "assets/js/sw.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "__MSG_defTitle__",
+    "default_icon": {
+      "16": "assets/images/icon16_disabled.png",
+      "32": "assets/images/icon32_disabled.png"
+    },
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "assets/images/icon16_enabled.png",
+    "32": "assets/images/icon32_enabled.png",
+    "48": "assets/images/icon48_enabled.png",
+    "128": "assets/images/icon128_enabled.png"
+  }
+}

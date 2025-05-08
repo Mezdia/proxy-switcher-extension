@@ -1,0 +1,18 @@
+body {
+    width: 600px;
+}
+
+.proxy_list input {
+    outline: none !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+}
+
+.copyright {
+    font-size: .75rem;
+}
+
+textarea[name="import_proxy"] {
+    max-height: 300px;
+}

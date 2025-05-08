@@ -1,0 +1,53 @@
+{
+  "defTitle": {
+    "message": "Simple Proxy Switcher"
+  },
+  "extName": {
+    "message": "Simple Proxy Switcher"
+  },
+  "extDescr": {
+    "message": "Simple Proxy Switcher"
+  },
+  "TEXT_WITH": {
+    "message": "С"
+  },
+  "TEXT_BY": {
+    "message": "от"
+  },
+  "TEXT_PROXY_LIST": {
+    "message": "Прокси"
+  },
+  "TEXT_BTN_DISABLE_PROXY": {
+    "message": "Выключить прокси"
+  },
+  "TEXT_IMPORT_PROXY": {
+    "message": "Импорт"
+  },
+  "TEXT_EXAMPLE": {
+    "message": "Пример (только http/s)"
+  },
+  "TEXT_OR": {
+    "message": "или"
+  },
+  "TEXT_BTN_SAVE": {
+    "message": "Сохранить"
+  },
+  "TEXT_SETTINGS": {
+    "message": "Настройки"
+  },
+  "TEXT_SETTINGS_INFO": {
+    "message": "Данные настройки будут срабатывать при изменении прокси"
+  },
+  "CH_RELOAD_CURRENT_TAB": {
+    "message": "Перезагрузить текущую вкладку"
+  },
+  "CH_RELOAD_OTHER_TABS": {
+    "message": "Перезагрузить остальные вкладки"
+  },
+  "CH_REMOVE_COOKIES": {
+    "message": "Очистить куки"
+  },
+  "CH_REMOVE_CACHE": {
+    "message": "Очистить кеш"
+  }
+}

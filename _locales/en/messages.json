@@ -1,0 +1,53 @@
+{
+  "defTitle": {
+    "message": "Simple Proxy Switcher"
+  },
+  "extName": {
+    "message": "Simple Proxy Switcher"
+  },
+  "extDescr": {
+    "message": "Simple Proxy Switcher"
+  },
+  "TEXT_WITH": {
+    "message": "With"
+  },
+  "TEXT_BY": {
+    "message": "by"
+  },
+  "TEXT_PROXY_LIST": {
+    "message": "Proxy"
+  },
+  "TEXT_BTN_DISABLE_PROXY": {
+    "message": "Disable proxy"
+  },
+  "TEXT_IMPORT_PROXY": {
+    "message": "Import"
+  },
+  "TEXT_EXAMPLE": {
+    "message": "Example (only http/s)"
+  },
+  "TEXT_OR": {
+    "message": "or"
+  },
+  "TEXT_BTN_SAVE": {
+    "message": "Save"
+  },
+  "TEXT_SETTINGS": {
+    "message": "Settings"
+  },
+  "TEXT_SETTINGS_INFO": {
+    "message": "These settings will work when the proxy is changed"
+  },
+  "CH_RELOAD_CURRENT_TAB": {
+    "message": "Reload current tab"
+  },
+  "CH_RELOAD_OTHER_TABS": {
+    "message": "Reload all other tabs"
+  },
+  "CH_REMOVE_COOKIES": {
+    "message": "Clear cookies"
+  },
+  "CH_REMOVE_CACHE": {
+    "message": "Clear cache"
+  }
+}
