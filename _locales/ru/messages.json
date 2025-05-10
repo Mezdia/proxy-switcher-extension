@@ -49,5 +49,8 @@
   },
   "CH_REMOVE_CACHE": {
     "message": "Очистить кеш"
+  },
+  "TEXT_EXCLUDE_URLS": {
+    "message": "Исключить URL-адреса"
   }
 }

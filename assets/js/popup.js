@@ -129,6 +129,10 @@ $(async function () {
         });
     });
 
+    $('#exclude_urls').val(stored.exclude_urls || '').on('change', function () {
+        chrome.runtime.sendMessage({action: 'set_option', key: 'exclude_urls', val: this.value.trim(),});
+    });
+
 
     await createTableProxy();
     document.body.style.display = '';

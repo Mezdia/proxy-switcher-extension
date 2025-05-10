@@ -5,6 +5,7 @@ const defaults = {
     reload_other_tabs: false,
     remove_cookies: false,
     remove_cache: false,
+    exclude_urls: '',
 };
 
 
@@ -78,20 +79,49 @@ function updateIcon() {
 }
 
 
-function applyProxy({ip, port, user = '', pass = ''}, withSideFx = true) {
-    const cfg = {
-        mode: 'fixed_servers',
-        rules: {singleProxy: {host: ip, port: Number(port)}},
-    };
-    chrome.proxy.settings.set({value: cfg, scope: 'regular'});
+async function applyProxy({ip, port, user = '', pass = ''}, withSideFx = true) {
+    const {exclude_urls = ''} = await chrome.storage.local.get('exclude_urls');
+    const patterns = exclude_urls.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+    let config;
+    const proxyHost = ip, proxyPort = Number(port);
+
+    const needsPac = patterns.some(p => p.includes('/'));
+    if (needsPac) {
+        const jsonPatterns = JSON.stringify(patterns);
+        const pacData = `
+function FindProxyForURL(url, host) {
+  const pats = ${jsonPatterns};
+  for (let i = 0; i < pats.length; i++) {
+    if (shExpMatch(url, pats[i]) || shExpMatch(host, pats[i])) {
+      return 'DIRECT';
+    }
+  }
+  return 'PROXY ${proxyHost}:${proxyPort}';
+}`;
+        config = {mode: 'pac_script', pacScript: {data: pacData}};
+    } else {
+        config = {
+            mode: 'fixed_servers',
+            rules: {
+                singleProxy: {host: proxyHost, port: proxyPort},
+                bypassList: patterns,
+            },
+        };
+    }
+
+    await chrome.proxy.settings.set({value: config, scope: 'regular'});
 
     proxyEnabled = true;
     proxyAuth = user && pass ? {user, pass} : null;
-
-    chrome.storage.local.set({proxy_current: JSON.stringify({ip, port, user, pass})});
+    await chrome.storage.local.set({
+        proxy_current: JSON.stringify({ip, port, user, pass})
+    });
     updateIcon();
+
     if (withSideFx) runSideEffects();
 }
+
 
 function disableProxy() {
     chrome.proxy.settings.clear({scope: 'regular'});
@@ -135,8 +165,22 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
             return true;
         }
 
-        case 'set_option': {
+        /*case 'set_option': {
             chrome.storage.local.set({[req.key]: req.val}).then(() => sendResponse({status: 'ok'}));
+            return true;
+        }*/
+
+        case 'set_option': {
+            chrome.storage.local.set({[req.key]: req.val}).then(async () => {
+                sendResponse({status: 'ok'});
+                if (req.key === 'exclude_urls' && proxyEnabled) {
+                    const {proxy_current} = await chrome.storage.local.get('proxy_current');
+                    if (proxy_current) {
+                        const p = JSON.parse(proxy_current);
+                        applyProxy(p, false);
+                    }
+                }
+            });
             return true;
         }
 

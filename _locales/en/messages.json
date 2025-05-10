@@ -49,5 +49,8 @@
   },
   "CH_REMOVE_CACHE": {
     "message": "Clear cache"
+  },
+  "TEXT_EXCLUDE_URLS": {
+    "message": "Exclude URLs"
   }
 }
