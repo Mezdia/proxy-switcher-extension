@@ -40,8 +40,8 @@ async function runSideEffects() {
         const wins = await chrome.windows.getAll({populate: true});
         for (const w of wins) {
             for (const t of w.tabs) {
-                if (reload_current_tab && t.active) chrome.tabs.reload(t.id);
-                if (reload_other_tabs && !t.active) chrome.tabs.reload(t.id);
+                if (/*reload_current_tab &&*/ t.active) chrome.tabs.reload(t.id, {bypassCache: true});
+                if (reload_other_tabs && !t.active) chrome.tabs.reload(t.id, {bypassCache: true});
             }
         }
     }
@@ -114,9 +114,7 @@ function FindProxyForURL(url, host) {
 
     proxyEnabled = true;
     proxyAuth = user && pass ? {user, pass} : null;
-    await chrome.storage.local.set({
-        proxy_current: JSON.stringify({ip, port, user, pass})
-    });
+    await chrome.storage.local.set({proxy_current: JSON.stringify({ip, port, user, pass})});
     updateIcon();
 
     if (withSideFx) runSideEffects();
@@ -134,20 +132,24 @@ function disableProxy() {
 
 
 chrome.storage.local.get('proxy_current').then(({proxy_current}) => {
+
     const p = readJSON(proxy_current);
     if (p && p.ip && p.port) applyProxy(p, false);
 });
 
 
-chrome.webRequest.onAuthRequired.addListener(
-    details => {
+chrome.webRequest.onAuthRequired.addListener(details => {
+
         if (details.isProxy && proxyAuth) {
             return {authCredentials: {username: proxyAuth.user, password: proxyAuth.pass}};
         }
-    },
-    {urls: ['<all_urls>']},
-    ['blocking']
+    }, {urls: ['<all_urls>']}, ['blocking']
 );
+
+
+/*chrome.proxy.onProxyError.addListener(details => {
+    console.log('chrome.proxy.onProxyError', details);
+});*/
 
 
 chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
@@ -164,11 +166,6 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
             });
             return true;
         }
-
-        /*case 'set_option': {
-            chrome.storage.local.set({[req.key]: req.val}).then(() => sendResponse({status: 'ok'}));
-            return true;
-        }*/
 
         case 'set_option': {
             chrome.storage.local.set({[req.key]: req.val}).then(async () => {
@@ -201,8 +198,7 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
         }
 
         case 'set_proxy': {
-            applyProxy(req.data);
-            sendResponse({status: 'ok'});
+            applyProxy(req.data).then(() => sendResponse({status: 'ok'}));
             return true;
         }
 

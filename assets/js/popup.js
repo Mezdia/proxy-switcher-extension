@@ -122,7 +122,7 @@ $(async function () {
 
     const stored = await chrome.runtime.sendMessage({action: 'get_option'});
 
-    const optionKeys = ['reload_current_tab', 'reload_other_tabs', 'remove_cookies', 'remove_cache'];
+    const optionKeys = [/*'reload_current_tab',*/ 'reload_other_tabs', 'remove_cookies', 'remove_cache'];
     optionKeys.forEach(key => {
         $('#' + key).prop('checked', !!stored[key]).on('change', function () {
             chrome.runtime.sendMessage({action: 'set_option', key: this.id, val: this.checked});
