@@ -11,6 +11,7 @@ const defaults = {
 
 let proxyEnabled = false;
 let proxyAuth = null;
+let _restored = false;
 
 
 const readJSON = str => {
@@ -36,7 +37,7 @@ async function runSideEffects() {
         'remove_cache',
     ]);
 
-    if (reload_current_tab || reload_other_tabs) {
+    if (true /*reload_current_tab || reload_other_tabs*/) {
         const wins = await chrome.windows.getAll({populate: true});
         for (const w of wins) {
             for (const t of w.tabs) {
@@ -52,19 +53,42 @@ async function runSideEffects() {
 
 
 function parseProxyList(raw) {
-    return raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-        .map(line => {
-            if (line.includes('@')) {
-                const [auth, host] = line.split('@');
-                const [user, pass] = auth.split(':');
-                const [ip, port] = host.split(':');
-                return {ip, port, user, pass};
-            }
+    let pendingComment = '';
 
-            const [ip, port, user = '', pass = ''] = line.split(':');
-            return {ip, port, user, pass};
-        })
-        .filter(({ip, port, user, pass}) => ip && port && (!user && !pass || user && pass));
+    return raw.split(/\r?\n/).reduce((out, rawLine) => {
+        const line = rawLine.trim();
+        if (!line) {
+            pendingComment = '';
+            return out;
+        }
+        if (line.startsWith('#')) {
+            pendingComment = line.slice(1).trim();
+            return out;
+        }
+
+        const idx = line.indexOf('#');
+        const text = idx === -1 ? line : line.slice(0, idx).trim();
+        const inlineComment = idx === -1 ? '' : line.slice(idx + 1).trim();
+
+        let ip, port, user = '', pass = '';
+        if (text.includes('@')) {
+            const [auth, host] = text.split('@');
+            [user, pass] = auth.split(':');
+            [ip, port] = host.split(':');
+        } else {
+            [ip, port, user = '', pass = ''] = text.split(':');
+        }
+
+        if (!ip || !port || ((!!user) ^ (!!pass))) {
+            pendingComment = '';
+            return out;
+        }
+
+        out.push({ip, port, user, pass, commentBefore: pendingComment, commentAfter: inlineComment});
+
+        pendingComment = '';
+        return out;
+    }, []);
 }
 
 
@@ -89,8 +113,7 @@ async function applyProxy({ip, port, user = '', pass = ''}, withSideFx = true) {
     const needsPac = patterns.some(p => p.includes('/'));
     if (needsPac) {
         const jsonPatterns = JSON.stringify(patterns);
-        const pacData = `
-function FindProxyForURL(url, host) {
+        const pacData = `function FindProxyForURL(url, host) {
   const pats = ${jsonPatterns};
   for (let i = 0; i < pats.length; i++) {
     if (shExpMatch(url, pats[i]) || shExpMatch(host, pats[i])) {
@@ -131,11 +154,30 @@ function disableProxy() {
 }
 
 
-chrome.storage.local.get('proxy_current').then(({proxy_current}) => {
+/*chrome.storage.local.get('proxy_current').then(({proxy_current}) => {
 
     const p = readJSON(proxy_current);
     if (p && p.ip && p.port) applyProxy(p, false);
-});
+});*/
+
+async function restoreProxy() {
+    if (_restored) return;
+    _restored = true;
+
+    const {proxy_current = ''} = await chrome.storage.local.get('proxy_current');
+    const p = readJSON(proxy_current);
+    if (p && p.ip && p.port) {
+        await applyProxy(p, false);
+    } else {
+        proxyEnabled = false;
+        proxyAuth = null;
+        updateIcon();
+    }
+}
+
+chrome.runtime.onStartup.addListener(restoreProxy);
+chrome.runtime.onInstalled.addListener(restoreProxy);
+restoreProxy();
 
 
 chrome.webRequest.onAuthRequired.addListener(details => {

@@ -41,11 +41,12 @@
                         <th style="width: 60px">PORT</th>
                         <th>LOGIN</th>
                         <th>PASSWORD</th>
+                        <th>NOTE</th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr>
-                        <td colspan="5" class="text-center">Empty</td>
+                        <td colspan="6" class="text-center">Empty</td>
                     </tr>
                     </tbody>
                 </table>
@@ -56,18 +57,37 @@
         <div class="tab-pane fade" id="nav-import" role="tabpanel" aria-labelledby="nav-import-tab" tabindex="0">
             <div class="card card-body border-0">
 
-                <p>
-                    __MSG_TEXT_EXAMPLE__:<br/>
-                    <b>ip:port</b> __MSG_TEXT_OR__<br/>
-                    <b>ip:port:login:password</b> __MSG_TEXT_OR__<br/>
-                    <b>login:password@ip:port</b>
-                </p>
+                <div class="d-grid gap-2">
+                    <div>
+                        <div class="accordion" id="importHelp">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed shadow-none p-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImportHelp" aria-expanded="false" aria-controls="collapseImportHelp">
+                                        __MSG_TEXT_EXAMPLE__
+                                    </button>
+                                </h2>
+                                <div id="collapseImportHelp" class="accordion-collapse collapse" data-bs-parent="#importHelp">
+                                    <div class="accordion-body p-2">
+                                <textarea class="form-control shadow-none" rows="5" style="resize: none;" readonly>ip:port
+ip:port:login:password
+login:password@ip:port
+# comment 1
+login:password@ip:port # comment 2</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <textarea class="form-control shadow-none" name="import_proxy" rows="6"></textarea>
+                    <div>
+                        <label for="import_proxy" class="form-label">__MSG_TEXT_PROXY_LIST__</label>
+                        <textarea class="form-control shadow-none" id="import_proxy" name="import_proxy" rows="12"></textarea>
+                    </div>
 
-                <button type="button" class="btn btn-warning mt-3 saveProxy">
-                    __MSG_TEXT_BTN_SAVE__
-                </button>
+                    <div>
+                        <button type="button" class="btn btn-warning w-100 saveProxy">__MSG_TEXT_BTN_SAVE__</button>
+                    </div>
+                </div>
 
             </div>
         </div>
@@ -75,50 +95,56 @@
         <div class="tab-pane fade" id="nav-settings" role="tabpanel" aria-labelledby="nav-settings-tab" tabindex="0">
             <div class="card card-body border-0">
 
-                <p class="m-0">__MSG_TEXT_SETTINGS_INFO__</p>
+                <div class="d-grid gap-2">
+                    <div>
+                        <p class="m-0">__MSG_TEXT_SETTINGS_INFO__</p>
 
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="" id="reload_current_tab" disabled checked>
-                    <label class="form-check-label" for="reload_current_tab">__MSG_CH_RELOAD_CURRENT_TAB__</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="reload_current_tab" disabled checked>
+                            <label class="form-check-label" for="reload_current_tab">__MSG_CH_RELOAD_CURRENT_TAB__</label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="reload_other_tabs">
+                            <label class="form-check-label" for="reload_other_tabs">__MSG_CH_RELOAD_OTHER_TABS__</label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="remove_cookies">
+                            <label class="form-check-label" for="remove_cookies">__MSG_CH_REMOVE_COOKIES__</label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="remove_cache">
+                            <label class="form-check-label" for="remove_cache">__MSG_CH_REMOVE_CACHE__</label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="exclude_urls" class="form-label">__MSG_TEXT_EXCLUDE_URLS__</label>
+                        <textarea class="form-control shadow-none" id="exclude_urls" name="exclude_urls" rows="10"></textarea>
+                    </div>
+
+                    <div>
+                        <button type="button" class="btn btn-warning w-100 i_do_nothing">__MSG_TEXT_BTN_SAVE__</button>
+                    </div>
                 </div>
-
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="" id="reload_other_tabs">
-                    <label class="form-check-label" for="reload_other_tabs">__MSG_CH_RELOAD_OTHER_TABS__</label>
-                </div>
-
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="" id="remove_cookies">
-                    <label class="form-check-label" for="remove_cookies">__MSG_CH_REMOVE_COOKIES__</label>
-                </div>
-
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="" id="remove_cache">
-                    <label class="form-check-label" for="remove_cache">__MSG_CH_REMOVE_CACHE__</label>
-                </div>
-
-                <label for="exclude_urls" class="form-label">__MSG_TEXT_EXCLUDE_URLS__</label>
-                <textarea class="form-control shadow-none" id="exclude_urls" name="exclude_urls" rows="10"></textarea>
-
-                <button type="button" class="btn btn-warning mt-3 i_do_nothing">__MSG_TEXT_BTN_SAVE__</button>
-
             </div>
         </div>
+
+        <div class="font-monospace text-end py-1 px-3 text-body-secondary copyright">
+            __MSG_TEXT_WITH__
+            <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-heart-fill text-danger" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z"/>
+            </svg>
+            __MSG_TEXT_BY__ <a href="https://maksam07.com/" id="copyright_link">MM07</a>
+        </div>
+
     </div>
 
-    <div class="font-monospace text-end py-1 px-3 text-body-secondary copyright">
-        __MSG_TEXT_WITH__
-        <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-heart-fill text-danger" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z"/>
-        </svg>
-        __MSG_TEXT_BY__ <a href="https://maksam07.com/" id="copyright_link">MM07</a>
-    </div>
-
-</div>
-
-<script src="assets/js/jquery.min.js"></script>
-<script src="assets/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
-<script src="assets/js/popup.js"></script>
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/popup.js"></script>
 
 </body>
 </html>

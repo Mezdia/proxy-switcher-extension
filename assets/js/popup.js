@@ -41,8 +41,12 @@ async function createTableProxy() {
 
     const tbody = $('table.proxy_list tbody').empty();
 
-    const textLines = list.map(p => (p.user && p.pass ? `${p.user}:${p.pass}@` : '') + `${p.ip}:${p.port}`);
-    $('[name="import_proxy"]').val(textLines.join('\n'));
+    $('[name="import_proxy"]').val(
+        list.flatMap(p => [
+            ...(p.commentBefore ? [`# ${p.commentBefore}`] : []),
+            `${p.user && p.pass ? `${p.user}:${p.pass}@` : ''}${p.ip}:${p.port}` + (p.commentAfter ? ` # ${p.commentAfter}` : '')
+        ]).join('\n')
+    );
 
     $('button.resetProxy')[current ? 'removeClass' : 'addClass']('d-none');
 
@@ -52,14 +56,13 @@ async function createTableProxy() {
     }
 
     list.forEach(p => {
-        const isCurrent =
-            current &&
-            current.ip === p.ip &&
-            current.port === p.port &&
-            current.user === p.user &&
-            current.pass === p.pass;
-
+        const isCurrent = current && current.ip === p.ip && current.port === p.port && current.user === p.user && current.pass === p.pass;
         const emoji = isCurrent ? '✅' : '⚪';
+        const after = p.commentAfter ?? '';
+
+        if (p.commentBefore) {
+            tbody.append(`<tr><td></td><td colspan="5" class="p-0 px-1">${p.commentBefore}</td></tr>`);
+        }
 
         tbody.append(`
         <tr>
@@ -70,6 +73,7 @@ async function createTableProxy() {
             <td class="p-0"><input class="form-control form-control-sm i_port" value="${p.port}" readonly></td>
             <td class="p-0"><input class="form-control form-control-sm i_user" value="${p.user}" readonly></td>
             <td class="p-0"><input class="form-control form-control-sm i_pass" value="${p.pass}" readonly></td>
+            <td class="p-0"><input class="form-control form-control-sm" value="${after}" title="${after}" readonly></td>
         </tr>
         `);
     });
