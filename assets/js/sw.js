@@ -37,11 +37,11 @@ async function runSideEffects() {
         'remove_cache',
     ]);
 
-    if (true /*reload_current_tab || reload_other_tabs*/) {
+    if (reload_current_tab || reload_other_tabs) {
         const wins = await chrome.windows.getAll({populate: true});
         for (const w of wins) {
             for (const t of w.tabs) {
-                if (/*reload_current_tab &&*/ t.active) chrome.tabs.reload(t.id, {bypassCache: true});
+                if (reload_current_tab && t.active) chrome.tabs.reload(t.id, {bypassCache: true});
                 if (reload_other_tabs && !t.active) chrome.tabs.reload(t.id, {bypassCache: true});
             }
         }
@@ -53,6 +53,7 @@ async function runSideEffects() {
 
 
 function parseProxyList(raw) {
+    const escape = {'&': '&amp;', '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;'};
     let pendingComment = '';
 
     return raw.split(/\r?\n/).reduce((out, rawLine) => {
@@ -62,13 +63,13 @@ function parseProxyList(raw) {
             return out;
         }
         if (line.startsWith('#')) {
-            pendingComment = line.slice(1).trim();
+            pendingComment = line.slice(1).trim().replace(/[&"'<>]/g, c => (escape)[c]);
             return out;
         }
 
         const idx = line.indexOf('#');
         const text = idx === -1 ? line : line.slice(0, idx).trim();
-        const inlineComment = idx === -1 ? '' : line.slice(idx + 1).trim();
+        const inlineComment = idx === -1 ? '' : line.slice(idx + 1).trim().replace(/[&"'<>]/g, c => (escape)[c]);
 
         let ip, port, user = '', pass = '';
         if (text.includes('@')) {

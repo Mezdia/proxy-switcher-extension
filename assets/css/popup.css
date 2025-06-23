@@ -16,3 +16,7 @@ body {
 textarea[name="import_proxy"] {
     max-height: 300px;
 }
+
+.custom-tooltip .tooltip-inner {
+    max-width: 400px;
+}

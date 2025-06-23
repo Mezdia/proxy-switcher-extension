@@ -19,6 +19,14 @@ function i18n() {
 }
 
 
+function refresh_tooltip() {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(tooltip => new bootstrap.Tooltip(tooltip, {
+        animation: false,
+        customClass: 'custom-tooltip',
+    }));
+}
+
+
 async function createTableProxy() {
     const {proxy_list = '[]', proxy_current = ''} = await chrome.runtime.sendMessage({
         action: 'get_option',
@@ -69,19 +77,22 @@ async function createTableProxy() {
             <td class="py-0 px-1 align-middle${isCurrent ? '' : ' text-secondary'}">
                 <a href="#" class="text-decoration-none proxy_${isCurrent ? 'current' : 'select'}">${emoji}</a>
             </td>
-            <td class="p-0"><input class="form-control form-control-sm i_ip"   value="${p.ip}"   readonly></td>
-            <td class="p-0"><input class="form-control form-control-sm i_port" value="${p.port}" readonly></td>
-            <td class="p-0"><input class="form-control form-control-sm i_user" value="${p.user}" readonly></td>
-            <td class="p-0"><input class="form-control form-control-sm i_pass" value="${p.pass}" readonly></td>
-            <td class="p-0"><input class="form-control form-control-sm" value="${after}" title="${after}" readonly></td>
+            <td class="p-0"><input class="font-monospace form-control form-control-sm i_ip"   value="${p.ip}" readonly></td>
+            <td class="p-0"><input class="font-monospace form-control form-control-sm i_port" value="${p.port}" readonly></td>
+            <td class="p-0"><input class="font-monospace form-control form-control-sm i_user" value="${p.user}" readonly></td>
+            <td class="p-0"><input class="font-monospace form-control form-control-sm i_pass" value="${p.pass}" readonly></td>
+            <td class="p-0"><input class="font-monospace form-control form-control-sm" value="${after}" data-bs-toggle="tooltip" data-bs-placement="left" title="${after}" readonly></td>
         </tr>
         `);
     });
+
+    refresh_tooltip();
 }
 
 
 $(async function () {
     i18n();
+    refresh_tooltip();
 
     $("body")
         .on('click', 'a#copyright_link', function () {
@@ -126,7 +137,7 @@ $(async function () {
 
     const stored = await chrome.runtime.sendMessage({action: 'get_option'});
 
-    const optionKeys = [/*'reload_current_tab',*/ 'reload_other_tabs', 'remove_cookies', 'remove_cache'];
+    const optionKeys = ['reload_current_tab', 'reload_other_tabs', 'remove_cookies', 'remove_cache'];
     optionKeys.forEach(key => {
         $('#' + key).prop('checked', !!stored[key]).on('change', function () {
             chrome.runtime.sendMessage({action: 'set_option', key: this.id, val: this.checked});
