@@ -1,12 +1,27 @@
-function i18n() {
+async function loadLocaleMap(lang) {
+    if (!lang) return null;
+    try {
+        const url = chrome.runtime.getURL(`_locales/${lang}/messages.json`);
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const json = await res.json();
+        const map = Object.entries(json).reduce((o, [k, v]) => (o[k] = v && v.message ? v.message : '', o), {});
+        return map;
+    } catch (e) {
+        return null;
+    }
+}
+
+function applyI18n(map) {
     const html = document.documentElement;
-    html.innerHTML = html.innerHTML.replace(/__MSG_(\w+)__/g, (_, key) =>
-        chrome.i18n.getMessage(key) || ''
-    );
+    html.innerHTML = html.innerHTML.replace(/__MSG_(\w+)__/g, (_, key) => {
+        if (map && map[key]) return map[key];
+        return chrome.i18n.getMessage(key) || '';
+    });
 
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.dataset.i18n;
-        const msg = chrome.i18n.getMessage(key);
+        const msg = (map && map[key]) ? map[key] : chrome.i18n.getMessage(key);
         if (!msg) return;
 
         if (el instanceof HTMLInputElement) {
@@ -16,6 +31,24 @@ function i18n() {
             el.innerHTML = msg;
         }
     });
+}
+
+async function applyLanguage(lang) {
+    // lang: '' means auto (browser)
+    const html = document.documentElement;
+    if (lang === 'fa') {
+        html.dir = 'rtl';
+        html.lang = 'fa';
+    } else if (lang) {
+        html.dir = 'ltr';
+        html.lang = lang;
+    } else {
+        html.dir = 'ltr';
+        html.lang = navigator.language || 'en';
+    }
+
+    const map = await loadLocaleMap(lang);
+    applyI18n(map);
 }
 
 
@@ -91,7 +124,8 @@ async function createTableProxy() {
 
 
 $(async function () {
-    i18n();
+    const stored = await chrome.runtime.sendMessage({action: 'get_option'});
+    await applyLanguage(stored.lang || '');
     refresh_tooltip();
 
     $("body")
@@ -135,8 +169,6 @@ $(async function () {
         });
 
 
-    const stored = await chrome.runtime.sendMessage({action: 'get_option'});
-
     const optionKeys = ['reload_current_tab', 'reload_other_tabs', 'remove_cookies', 'remove_cache'];
     optionKeys.forEach(key => {
         $('#' + key).prop('checked', !!stored[key]).on('change', function () {
@@ -146,6 +178,13 @@ $(async function () {
 
     $('#exclude_urls').val(stored.exclude_urls || '').on('change', function () {
         chrome.runtime.sendMessage({action: 'set_option', key: 'exclude_urls', val: this.value.trim(),});
+    });
+
+    // language selector
+    $('#language_select').val(stored.lang || '').on('change', function () {
+        const v = this.value || '';
+        chrome.runtime.sendMessage({action: 'set_option', key: 'lang', val: v});
+        applyLanguage(v);
     });
 
 

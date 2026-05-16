@@ -5,6 +5,7 @@ const defaults = {
     reload_other_tabs: false,
     remove_cookies: false,
     remove_cache: false,
+    lang: '',
     exclude_urls: '',
 };
 

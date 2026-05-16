@@ -53,4 +53,17 @@
   "TEXT_EXCLUDE_URLS": {
     "message": "Exclude URLs"
   }
+  ,
+  "TEXT_LANGUAGE": {
+    "message": "Language"
+  },
+  "TEXT_LANGUAGE_AUTO": {
+    "message": "Auto (browser)"
+  },
+  "TEXT_LANG_EN": {
+    "message": "English"
+  },
+  "TEXT_LANG_FA": {
+    "message": "Persian (Farsi)"
+  }
 }
