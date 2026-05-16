@@ -20,5 +20,13 @@
   "TEXT_LANGUAGE": { "message": "زبان" },
   "TEXT_LANGUAGE_AUTO": { "message": "خودکار (مرورگر)" },
   "TEXT_LANG_EN": { "message": "انگلیسی" },
-  "TEXT_LANG_FA": { "message": "فارسی" }
+  "TEXT_LANG_FA": { "message": "فارسی" },
+  "TEXT_LANG_RU": { "message": "روسی" },
+  "TEXT_MADE_WITH_LOVE": { "message": "ساخته‌شده با " },
+  "TEXT_BY_AUTHOR": { "message": " توسط" },
+  "TEXT_COL_IP": { "message": "آی‌پی" },
+  "TEXT_COL_PORT": { "message": "پورت" },
+  "TEXT_COL_LOGIN": { "message": "نام‌کاربری" },
+  "TEXT_COL_PASSWORD": { "message": "رمز" },
+  "TEXT_COL_NOTE": { "message": "یادداشت" }
 }

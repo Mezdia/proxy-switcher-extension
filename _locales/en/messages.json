@@ -65,5 +65,13 @@
   },
   "TEXT_LANG_FA": {
     "message": "Persian (Farsi)"
-  }
+  },
+  "TEXT_LANG_RU": { "message": "Russian" },
+  "TEXT_MADE_WITH_LOVE": { "message": "Made with " },
+  "TEXT_BY_AUTHOR": { "message": " by" },
+  "TEXT_COL_IP": { "message": "IP" },
+  "TEXT_COL_PORT": { "message": "Port" },
+  "TEXT_COL_LOGIN": { "message": "Login" },
+  "TEXT_COL_PASSWORD": { "message": "Password" },
+  "TEXT_COL_NOTE": { "message": "Note" }
 }

@@ -53,4 +53,26 @@
   "TEXT_EXCLUDE_URLS": {
     "message": "Исключить URL-адреса"
   }
+  ,"TEXT_LANGUAGE": {
+    "message": "Язык"
+  },
+  "TEXT_LANGUAGE_AUTO": {
+    "message": "Авто (браузер)"
+  },
+  "TEXT_LANG_EN": {
+    "message": "Английский"
+  },
+  "TEXT_LANG_FA": {
+    "message": "Персидский (Farsi)"
+  },
+  "TEXT_LANG_RU": {
+    "message": "Русский"
+  },
+  "TEXT_MADE_WITH_LOVE": { "message": "Сделано с " },
+  "TEXT_BY_AUTHOR": { "message": " от" },
+  "TEXT_COL_IP": { "message": "IP" },
+  "TEXT_COL_PORT": { "message": "Порт" },
+  "TEXT_COL_LOGIN": { "message": "Логин" },
+  "TEXT_COL_PASSWORD": { "message": "Пароль" },
+  "TEXT_COL_NOTE": { "message": "Примечание" }
 }

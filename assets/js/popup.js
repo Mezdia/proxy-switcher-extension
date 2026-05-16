@@ -126,6 +126,21 @@ async function createTableProxy() {
 $(async function () {
     const stored = await chrome.runtime.sendMessage({action: 'get_option'});
     await applyLanguage(stored.lang || '');
+    // theme handling: apply stored or system preference
+    function applyThemeClass(theme){
+        const html = document.documentElement;
+        if(theme === 'dark') html.classList.add('dark');
+        else if(theme === 'light') html.classList.remove('dark');
+        else {
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            html.classList.toggle('dark', prefersDark);
+        }
+        const btn = document.getElementById('theme_toggle');
+        if(btn) btn.textContent = html.classList.contains('dark') ? '☀️' : '🌙';
+    }
+
+    applyThemeClass(stored.theme || '');
+
     refresh_tooltip();
 
     $("body")
@@ -185,6 +200,14 @@ $(async function () {
         const v = this.value || '';
         chrome.runtime.sendMessage({action: 'set_option', key: 'lang', val: v});
         applyLanguage(v);
+    });
+
+    // theme toggle button
+    $('#theme_toggle').on('click', async function(){
+        const html = document.documentElement;
+        const newTheme = html.classList.contains('dark') ? '' : 'dark';
+        await chrome.runtime.sendMessage({action: 'set_option', key: 'theme', val: newTheme});
+        applyThemeClass(newTheme);
     });
 
 

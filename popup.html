@@ -10,18 +10,17 @@
 </head>
 <body style="display: none;">
 
-<div class="container-fluid bg-light p-0">
+<div class="container-fluid app p-0">
     <nav class="border-bottom">
-        <div class="nav nav-tabs" id="nav-tab" role="tablist">
-            <button class="nav-link active" id="nav-list-tab" data-bs-toggle="tab" data-bs-target="#nav-list" type="button" role="tab" aria-controls="nav-list" aria-selected="true">
-                __MSG_TEXT_PROXY_LIST__
-            </button>
-            <button class="nav-link" id="nav-import-tab" data-bs-toggle="tab" data-bs-target="#nav-import" type="button" role="tab" aria-controls="nav-import" aria-selected="false">
-                __MSG_TEXT_IMPORT_PROXY__
-            </button>
-            <button class="nav-link" id="nav-settings-tab" data-bs-toggle="tab" data-bs-target="#nav-settings" type="button" role="tab" aria-controls="nav-settings" aria-selected="false">
-                __MSG_TEXT_SETTINGS__
-            </button>
+        <div class="d-flex align-items-center">
+            <div class="nav nav-tabs flex-grow-1" id="nav-tab" role="tablist">
+                <button class="nav-link active" id="nav-list-tab" data-bs-toggle="tab" data-bs-target="#nav-list" type="button" role="tab" aria-controls="nav-list" aria-selected="true">__MSG_TEXT_PROXY_LIST__</button>
+                <button class="nav-link" id="nav-import-tab" data-bs-toggle="tab" data-bs-target="#nav-import" type="button" role="tab" aria-controls="nav-import" aria-selected="false">__MSG_TEXT_IMPORT_PROXY__</button>
+                <button class="nav-link" id="nav-settings-tab" data-bs-toggle="tab" data-bs-target="#nav-settings" type="button" role="tab" aria-controls="nav-settings" aria-selected="false">__MSG_TEXT_SETTINGS__</button>
+            </div>
+            <div class="ms-2">
+                <button id="theme_toggle" class="btn btn-sm btn-outline-secondary" title="Toggle theme">🌙</button>
+            </div>
         </div>
     </nav>
 
@@ -29,19 +28,17 @@
         <div class="tab-pane fade show active" id="nav-list" role="tabpanel" aria-labelledby="nav-list-tab" tabindex="0">
             <div class="card card-body border-0">
 
-                <button type="button" class="btn btn-secondary mb-3 resetProxy" id="resetProxy">
-                    __MSG_TEXT_BTN_DISABLE_PROXY__
-                </button>
+                <button type="button" class="btn btn-outline-danger mb-3 resetProxy" id="resetProxy">__MSG_TEXT_BTN_DISABLE_PROXY__</button>
 
                 <table class="table table-sm table-hover table-bordered m-0 proxy_list">
                     <thead>
                     <tr>
                         <th style="width: 1px"></th>
-                        <th style="min-width: 110px">IP</th>
-                        <th style="min-width: 60px">PORT</th>
-                        <th>LOGIN</th>
-                        <th>PASSWORD</th>
-                        <th>NOTE</th>
+                        <th style="min-width: 110px">__MSG_TEXT_COL_IP__</th>
+                        <th style="min-width: 60px">__MSG_TEXT_COL_PORT__</th>
+                        <th>__MSG_TEXT_COL_LOGIN__</th>
+                        <th>__MSG_TEXT_COL_PASSWORD__</th>
+                        <th>__MSG_TEXT_COL_NOTE__</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -62,9 +59,7 @@
                         <div class="accordion" id="importHelp">
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed shadow-none p-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImportHelp" aria-expanded="false" aria-controls="collapseImportHelp">
-                                        __MSG_TEXT_EXAMPLE__
-                                    </button>
+                                    <button class="accordion-button collapsed shadow-none p-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImportHelp" aria-expanded="false" aria-controls="collapseImportHelp">__MSG_TEXT_EXAMPLE__</button>
                                 </h2>
                                 <div id="collapseImportHelp" class="accordion-collapse collapse" data-bs-parent="#importHelp">
                                     <div class="accordion-body p-2">
@@ -85,7 +80,7 @@ login:password@ip:port # comment 2</textarea>
                     </div>
 
                     <div>
-                        <button type="button" class="btn btn-warning w-100 saveProxy">__MSG_TEXT_BTN_SAVE__</button>
+                        <button type="button" class="btn btn-primary w-100 saveProxy">__MSG_TEXT_BTN_SAVE__</button>
                     </div>
                 </div>
 
@@ -125,6 +120,7 @@ login:password@ip:port # comment 2</textarea>
                                 <option value="">__MSG_TEXT_LANGUAGE_AUTO__</option>
                                 <option value="en">__MSG_TEXT_LANG_EN__</option>
                                 <option value="fa">__MSG_TEXT_LANG_FA__</option>
+                                <option value="ru">__MSG_TEXT_LANG_RU__</option>
                             </select>
                         </div>
                     </div>
@@ -135,18 +131,16 @@ login:password@ip:port # comment 2</textarea>
                     </div>
 
                     <div>
-                        <button type="button" class="btn btn-warning w-100 i_do_nothing">__MSG_TEXT_BTN_SAVE__</button>
+                        <button type="button" class="btn btn-primary w-100 i_do_nothing">__MSG_TEXT_BTN_SAVE__</button>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="font-monospace text-end py-1 px-3 text-body-secondary copyright">
-            __MSG_TEXT_WITH__
-            <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-heart-fill text-danger" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z"/>
-            </svg>
-            __MSG_TEXT_BY__ <a href="https://github.com/Mezdia" id="copyright_link">Mezdia</a>
+            __MSG_TEXT_MADE_WITH_LOVE__
+            <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-heart-fill text-danger" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z"/></svg>
+            __MSG_TEXT_BY_AUTHOR__ <a href="https://github.com/Mezdia" id="copyright_link">Mezdia</a>
         </div>
 
     </div>
