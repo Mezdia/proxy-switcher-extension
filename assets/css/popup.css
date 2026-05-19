@@ -1095,62 +1095,16 @@ textarea::placeholder {
 .d-none { display: none !important; }
 
 /* ── Monitoring Section ── */
-.monitoring-section {
+.monitoring-link-section {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
-.monitoring-fields {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding-top: 4px;
-}
-
-.monitoring-fields input {
-    width: 100%;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-    color: var(--text);
-    font-family: var(--font-mono);
+.monitoring-options-btn {
+    margin-top: 4px;
+    padding: 10px 14px;
     font-size: 12px;
-    padding: 10px 12px;
-    border-radius: var(--radius-md);
-    outline: none;
-    transition: all var(--transition);
-    -webkit-appearance: none;
-}
-
-.monitoring-fields input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px var(--primary-dim);
-}
-
-.monitoring-status {
-    font-size: 11px;
-    padding: 8px 12px;
-    border-radius: var(--radius-md);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-}
-
-.monitoring-status.connected {
-    border-color: rgba(74,222,128,0.3);
-    color: var(--success);
-    background: var(--success-dim);
-}
-
-.monitoring-status.disconnected {
-    border-color: rgba(248,113,113,0.3);
-    color: var(--danger);
-    background: var(--danger-dim);
-}
-
-.monitoring-status.pending {
-    border-color: rgba(251,191,36,0.3);
-    color: var(--warning);
-    background: var(--warning-dim);
 }
 
 /* ── Responsive ── */

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mezdia — Monitoring Settings</title>
+    <link href="assets/css/options.css" rel="stylesheet">
+</head>
+<body style="display: none;">
+
+<div class="options-app">
+    <!-- Header -->
+    <header class="options-header">
+        <div class="options-brand">
+            <svg class="header-logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+            <span class="header-title">Mezdia Proxy Switcher</span>
+            <span class="header-subtitle" data-i18n="monitoring_settings">Monitoring Settings</span>
+        </div>
+    </header>
+
+    <div class="options-content">
+        <!-- Enable Monitoring -->
+        <div class="options-section">
+            <div class="section-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                <h2 data-i18n="monitoring">Monitoring</h2>
+            </div>
+            <p class="section-desc" data-i18n="monitoring_desc">Configure how browsing data is tracked and sent to your monitoring server. Data is sent automatically at the configured interval.</p>
+
+            <label class="toggle-item">
+                <span data-i18n="enable_monitoring">Enable Monitoring</span>
+                <div class="toggle">
+                    <input type="checkbox" id="monitoring_enabled">
+                    <span class="toggle-slider"></span>
+                </div>
+            </label>
+        </div>
+
+        <!-- Server Configuration -->
+        <div class="options-section" id="server_config_section" style="display:none">
+            <div class="section-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+                    <line x1="6" y1="6" x2="6.01" y2="6"/>
+                    <line x1="6" y1="18" x2="6.01" y2="18"/>
+                </svg>
+                <h2 data-i18n="server_config">Server Configuration</h2>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="monitoring_url" data-i18n="server_url">Server URL</label>
+                <input type="url" id="monitoring_url" placeholder="https://your-app.onrender.com" dir="ltr" class="ltr-force">
+                <p class="field-hint" data-i18n="server_url_hint">The URL of your Mezdia Monitor server (deployed on render.com or running locally)</p>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="monitoring_api_key" data-i18n="api_key">API Key</label>
+                <input type="text" id="monitoring_api_key" dir="ltr" class="ltr-force">
+                <p class="field-hint" data-i18n="api_key_hint">The API key configured in your server's .env file (MONITOR_API_KEY)</p>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="monitoring_interval" data-i18n="report_interval">Report Interval (seconds)</label>
+                <input type="number" id="monitoring_interval" min="30" max="600" value="120" dir="ltr" class="ltr-force">
+                <p class="field-hint" data-i18n="interval_hint">How often to send browsing data to the server (minimum 30 seconds, default 120)</p>
+            </div>
+
+            <label class="toggle-item">
+                <span data-i18n="send_through_proxy">Send Through Proxy</span>
+                <div class="toggle">
+                    <input type="checkbox" id="monitoring_through_proxy">
+                    <span class="toggle-slider"></span>
+                </div>
+            </label>
+            <p class="field-hint" style="margin-top: -4px" data-i18n="proxy_hint">Route monitoring traffic through the active proxy (useful if the server is behind a firewall)</p>
+        </div>
+
+        <!-- Connection Status -->
+        <div class="options-section" id="status_section" style="display:none">
+            <div class="section-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <h2 data-i18n="connection_status">Connection Status</h2>
+            </div>
+
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-label" data-i18n="connection">Connection</div>
+                    <div class="status-value" id="status_connection">
+                        <span class="status-badge pending">—</span>
+                    </div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label" data-i18n="last_report">Last Report</div>
+                    <div class="status-value" id="status_last_report">—</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label" data-i18n="visits_sent">Visits Sent</div>
+                    <div class="status-value" id="status_visits_sent">0</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label" data-i18n="reports_sent">Reports Sent</div>
+                    <div class="status-value" id="status_reports_sent">0</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label" data-i18n="pending_visits">Pending Visits</div>
+                    <div class="status-value" id="status_pending">0</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label" data-i18n="active_visits">Active Visits</div>
+                    <div class="status-value" id="status_active">0</div>
+                </div>
+            </div>
+
+            <div id="status_detail" class="status-detail"></div>
+
+            <div class="actions-row">
+                <button type="button" class="btn btn-primary" id="test_connection_btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span data-i18n="test_connection">Test Connection</span>
+                </button>
+                <button type="button" class="btn btn-secondary" id="send_now_btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    <span data-i18n="send_now">Send Now</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Device Info -->
+        <div class="options-section" id="device_section" style="display:none">
+            <div class="section-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+                <h2 data-i18n="device_info">Device Info</h2>
+            </div>
+            <div class="device-info">
+                <div class="device-info-row">
+                    <span class="device-info-label" data-i18n="device_id">Device ID</span>
+                    <span class="device-info-value" id="device_id_value">—</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/options.js"></script>
+
+</body>
+</html>

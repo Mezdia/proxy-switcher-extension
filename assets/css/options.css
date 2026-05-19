@@ -1,0 +1,435 @@
+/* ═══════════════════════════════════════════════════
+   Mezdia Proxy Switcher — Options Page Styles
+   ═══════════════════════════════════════════════════ */
+
+:root {
+    --bg: #09090b;
+    --bg-elevated: #111113;
+    --bg-surface: #18181b;
+    --bg-hover: #1f1f23;
+    --bg-active: #27272a;
+    --border: #27272a;
+    --border-subtle: #1e1e21;
+    --text: #fafafa;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --primary: #818cf8;
+    --primary-hover: #6366f1;
+    --primary-dim: rgba(99, 102, 241, 0.12);
+    --danger: #f87171;
+    --danger-dim: rgba(239, 68, 68, 0.10);
+    --success: #4ade80;
+    --success-dim: rgba(74, 222, 128, 0.10);
+    --warning: #fbbf24;
+    --warning-dim: rgba(251, 191, 36, 0.10);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-full: 9999px;
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    width: 100%;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-full); }
+
+/* ── App Container ── */
+.options-app {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+/* ── Header ── */
+.options-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 24px;
+}
+
+.options-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-logo {
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.header-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.header-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-left: 4px;
+    padding-left: 12px;
+    border-left: 2px solid var(--border);
+}
+
+/* ── Sections ── */
+.options-section {
+    margin-bottom: 24px;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.section-header svg {
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.section-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.section-desc {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+/* ── Toggle Switch ── */
+.toggle-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-bottom: 8px;
+}
+
+.toggle-item:hover {
+    background: var(--bg-hover);
+    border-color: var(--border);
+}
+
+.toggle-item span {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 500;
+}
+
+.toggle {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.toggle-slider {
+    position: relative;
+    display: block;
+    width: 44px;
+    height: 26px;
+    background: var(--bg-active);
+    border-radius: var(--radius-full);
+    transition: all var(--transition);
+    border: 1px solid var(--border);
+}
+
+.toggle-slider::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    background: var(--text-muted);
+    border-radius: var(--radius-full);
+    transition: all var(--transition);
+}
+
+.toggle input:checked + .toggle-slider {
+    background: var(--primary-dim);
+    border-color: var(--primary);
+}
+
+.toggle input:checked + .toggle-slider::after {
+    transform: translateX(18px);
+    background: var(--primary);
+}
+
+/* ── Form Fields ── */
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.field-hint {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: 2px;
+}
+
+input[type="url"],
+input[type="text"],
+input[type="number"] {
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    outline: none;
+    transition: all var(--transition);
+    -webkit-appearance: none;
+}
+
+input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-dim);
+}
+
+input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.ltr-force {
+    direction: ltr !important;
+    text-align: left !important;
+}
+
+/* ── Status Grid ── */
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.status-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    text-align: center;
+}
+
+.status-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.status-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+/* ── Status Badge ── */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.status-badge.connected {
+    background: var(--success-dim);
+    color: var(--success);
+    border: 1px solid rgba(74,222,128,0.2);
+}
+
+.status-badge.disconnected {
+    background: var(--danger-dim);
+    color: var(--danger);
+    border: 1px solid rgba(248,113,113,0.2);
+}
+
+.status-badge.pending {
+    background: var(--warning-dim);
+    color: var(--warning);
+    border: 1px solid rgba(251,191,36,0.2);
+}
+
+.status-badge.disabled {
+    background: var(--bg-hover);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+}
+
+/* ── Status Detail ── */
+.status-detail {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    line-height: 1.6;
+    word-break: break-all;
+}
+
+.status-detail:empty {
+    display: none;
+}
+
+/* ── Device Info ── */
+.device-info {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+}
+
+.device-info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.device-info-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.device-info-value {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    word-break: break-all;
+}
+
+/* ── Buttons ── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn svg { flex-shrink: 0; }
+
+.btn-primary {
+    background: var(--primary);
+    color: #ffffff;
+}
+.btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+    border-color: var(--text-muted);
+}
+
+.actions-row {
+    display: flex;
+    gap: 10px;
+}
+
+/* ── Monitoring Link Section (popup) ── */
+.monitoring-link-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.monitoring-options-btn {
+    margin-top: 4px;
+    padding: 10px 14px;
+    font-size: 12px;
+}
+
+/* ── RTL ── */
+[dir="rtl"] .header-subtitle {
+    margin-left: 0;
+    margin-right: 4px;
+    padding-left: 0;
+    padding-right: 12px;
+    border-left: none;
+    border-right: 2px solid var(--border);
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    .status-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .options-app {
+        padding: 16px;
+    }
+}

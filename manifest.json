@@ -1,7 +1,7 @@
 {
   "name": "__MSG_extName__",
   "description": "__MSG_extDescr__",
-  "version": "3.9.0",
+  "version": "3.10.0",
   "manifest_version": 3,
   "default_locale": "en",
   "permissions": [
@@ -10,7 +10,8 @@
     "storage",
     "webRequest",
     "webRequestAuthProvider",
-    "tabGroups"
+    "tabGroups",
+    "alarms"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -19,6 +20,7 @@
     "service_worker": "assets/js/sw.js",
     "type": "module"
   },
+  "options_page": "options.html",
   "action": {
     "default_title": "__MSG_defTitle__",
     "default_icon": {

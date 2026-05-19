@@ -621,8 +621,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize create group button
     initCreateGroupBtn();
 
-    // Initialize monitoring settings
-    initMonitoring(stored);
+    // Monitoring options button
+    const monitorBtn = document.getElementById('open_monitoring_options');
+    if (monitorBtn) {
+        monitorBtn.addEventListener('click', () => {
+            chrome.runtime.openOptionsPage();
+        });
+    }
 
     // Proxy list
     await createTableProxy();
@@ -724,109 +729,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 
-// ── Monitoring Settings ──
 
-/**
- * Initialize monitoring settings UI and event listeners.
- */
-function initMonitoring(stored) {
-    const enabledCheckbox = document.getElementById('monitoring_enabled');
-    const fieldsDiv = document.getElementById('monitoring_fields');
-    const urlInput = document.getElementById('monitoring_url');
-    const apiKeyInput = document.getElementById('monitoring_api_key');
-    const throughProxyCheckbox = document.getElementById('monitoring_through_proxy');
-    const statusDiv = document.getElementById('monitoring_status');
-
-    if (!enabledCheckbox || !fieldsDiv) return;
-
-    // Set initial values from storage
-    enabledCheckbox.checked = !!stored.monitoring_enabled;
-    if (urlInput) urlInput.value = stored.monitoring_url || '';
-    if (apiKeyInput) apiKeyInput.value = stored.monitoring_api_key || '';
-    if (throughProxyCheckbox) throughProxyCheckbox.checked = !!stored.monitoring_through_proxy;
-
-    // Show/hide monitoring fields based on enabled state
-    fieldsDiv.style.display = enabledCheckbox.checked ? '' : 'none';
-
-    // If enabled, fetch and display current connection status
-    if (enabledCheckbox.checked) {
-        updateMonitoringStatus();
-    }
-
-    // Toggle monitoring enabled
-    enabledCheckbox.addEventListener('change', async function () {
-        fieldsDiv.style.display = this.checked ? '' : 'none';
-        await chrome.runtime.sendMessage({ action: 'set_option', key: 'monitoring_enabled', val: this.checked });
-
-        if (this.checked) {
-            updateMonitoringStatus();
-        } else {
-            if (statusDiv) {
-                statusDiv.className = 'monitoring-status';
-                statusDiv.textContent = t('TEXT_MONITORING_STATUS_DISABLED');
-            }
-        }
-    });
-
-    // Monitoring URL change (debounced)
-    let urlDebounce = null;
-    if (urlInput) {
-        urlInput.addEventListener('input', function () {
-            if (urlDebounce) clearTimeout(urlDebounce);
-            urlDebounce = setTimeout(async () => {
-                await chrome.runtime.sendMessage({ action: 'set_option', key: 'monitoring_url', val: this.value.trim() });
-                // Test connection after URL change if enabled
-                if (enabledCheckbox.checked && this.value.trim()) {
-                    updateMonitoringStatus();
-                }
-            }, 800);
-        });
-    }
-
-    // API Key change (debounced)
-    let apiKeyDebounce = null;
-    if (apiKeyInput) {
-        apiKeyInput.addEventListener('input', function () {
-            if (apiKeyDebounce) clearTimeout(apiKeyDebounce);
-            apiKeyDebounce = setTimeout(async () => {
-                await chrome.runtime.sendMessage({ action: 'set_option', key: 'monitoring_api_key', val: this.value.trim() });
-            }, 800);
-        });
-    }
-
-    // Through proxy toggle
-    if (throughProxyCheckbox) {
-        throughProxyCheckbox.addEventListener('change', async function () {
-            await chrome.runtime.sendMessage({ action: 'set_option', key: 'monitoring_through_proxy', val: this.checked });
-        });
-    }
-}
-
-
-/**
- * Update the monitoring connection status display.
- */
-async function updateMonitoringStatus() {
-    const statusDiv = document.getElementById('monitoring_status');
-    if (!statusDiv) return;
-
-    try {
-        // First show pending
-        statusDiv.className = 'monitoring-status pending';
-        statusDiv.textContent = t('TEXT_MONITORING_STATUS_PENDING');
-
-        // Test the connection
-        const result = await chrome.runtime.sendMessage({ action: 'test_monitoring_connection' });
-
-        if (result && result.connected) {
-            statusDiv.className = 'monitoring-status connected';
-            statusDiv.textContent = t('TEXT_MONITORING_STATUS_CONNECTED');
-        } else {
-            statusDiv.className = 'monitoring-status disconnected';
-            statusDiv.textContent = t('TEXT_MONITORING_STATUS_DISCONNECTED');
-        }
-    } catch (e) {
-        statusDiv.className = 'monitoring-status disconnected';
-        statusDiv.textContent = t('TEXT_MONITORING_STATUS_DISCONNECTED');
-    }
-}
