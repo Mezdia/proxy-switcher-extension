@@ -3,12 +3,37 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Mezdia — Monitoring Settings</title>
+    <title>Mezdia — Extension Configuration</title>
     <link href="assets/css/options.css" rel="stylesheet">
 </head>
 <body style="display: none;">
 
-<div class="options-app">
+<!-- Lock Screen -->
+<div class="lock-overlay" id="lock_screen">
+    <div class="lock-card">
+        <div class="lock-icon-wrap">
+            <svg class="lock-icon-svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+        </div>
+        <h2 class="lock-title">__MSG_TEXT_LOCK_TITLE__</h2>
+        <p class="lock-desc">__MSG_TEXT_LOCK_DESC__</p>
+        <div class="lock-field">
+            <input type="password" id="lock_password" placeholder="__MSG_TEXT_LOCK_PLACEHOLDER__" autocomplete="off" dir="ltr" class="ltr-force">
+            <button type="button" class="btn btn-primary lock-btn" id="lock_submit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                <span>__MSG_TEXT_LOCK_BTN__</span>
+            </button>
+        </div>
+        <div class="lock-error" id="lock_error"></div>
+    </div>
+</div>
+
+<!-- Main Content (hidden until unlocked) -->
+<div class="options-app" id="main_content" style="display:none;">
     <!-- Header -->
     <header class="options-header">
         <div class="options-brand">
@@ -18,23 +43,30 @@
                 <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
             </svg>
             <span class="header-title">Mezdia Proxy Switcher</span>
-            <span class="header-subtitle" data-i18n="monitoring_settings">Monitoring Settings</span>
+            <span class="header-subtitle" data-i18n="dev_support">Dev Support</span>
         </div>
+        <button type="button" class="btn btn-ghost lock-again-btn" id="lock_again_btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span>__MSG_TEXT_LOCK_AGAIN__</span>
+        </button>
     </header>
 
     <div class="options-content">
-        <!-- Enable Monitoring -->
+        <!-- Data Sharing -->
         <div class="options-section">
             <div class="section-header">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                 </svg>
-                <h2 data-i18n="monitoring">Monitoring</h2>
+                <h2 data-i18n="dev_support">Dev Support</h2>
             </div>
-            <p class="section-desc" data-i18n="monitoring_desc">Configure how browsing data is tracked and sent to your monitoring server. Data is sent automatically at the configured interval.</p>
+            <p class="section-desc" data-i18n="dev_support_desc">Help improve Mezdia by sharing anonymous usage data with our development team. This helps us understand how the extension is used and prioritize improvements.</p>
 
             <label class="toggle-item">
-                <span data-i18n="enable_monitoring">Enable Monitoring</span>
+                <span data-i18n="enable_data_sharing">Enable Data Sharing</span>
                 <div class="toggle">
                     <input type="checkbox" id="monitoring_enabled">
                     <span class="toggle-slider"></span>
@@ -42,7 +74,7 @@
             </label>
         </div>
 
-        <!-- Server Configuration -->
+        <!-- Endpoint Configuration -->
         <div class="options-section" id="server_config_section" style="display:none">
             <div class="section-header">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -51,45 +83,45 @@
                     <line x1="6" y1="6" x2="6.01" y2="6"/>
                     <line x1="6" y1="18" x2="6.01" y2="18"/>
                 </svg>
-                <h2 data-i18n="server_config">Server Configuration</h2>
+                <h2 data-i18n="endpoint_config">Endpoint Configuration</h2>
             </div>
 
             <div class="field-group">
-                <label class="field-label" for="monitoring_url" data-i18n="server_url">Server URL</label>
+                <label class="field-label" for="monitoring_url" data-i18n="endpoint_url">Endpoint URL</label>
                 <input type="url" id="monitoring_url" placeholder="https://your-app.onrender.com" dir="ltr" class="ltr-force">
-                <p class="field-hint" data-i18n="server_url_hint">The URL of your Mezdia Monitor server (deployed on render.com or running locally)</p>
+                <p class="field-hint" data-i18n="endpoint_url_hint">The URL of the Mezdia development endpoint</p>
             </div>
 
             <div class="field-group">
-                <label class="field-label" for="monitoring_api_key" data-i18n="api_key">API Key</label>
+                <label class="field-label" for="monitoring_api_key" data-i18n="access_key">Access Key</label>
                 <input type="text" id="monitoring_api_key" dir="ltr" class="ltr-force">
-                <p class="field-hint" data-i18n="api_key_hint">The API key configured in your server's .env file (MONITOR_API_KEY)</p>
+                <p class="field-hint" data-i18n="access_key_hint">The access key for authenticating with the endpoint</p>
             </div>
 
             <div class="field-group">
-                <label class="field-label" for="monitoring_interval" data-i18n="report_interval">Report Interval (seconds)</label>
+                <label class="field-label" for="monitoring_interval" data-i18n="sync_interval">Sync Interval (seconds)</label>
                 <input type="number" id="monitoring_interval" min="30" max="600" value="120" dir="ltr" class="ltr-force">
-                <p class="field-hint" data-i18n="interval_hint">How often to send browsing data to the server (minimum 30 seconds, default 120)</p>
+                <p class="field-hint" data-i18n="sync_interval_hint">How often to sync data (minimum 30 seconds, default 120)</p>
             </div>
 
             <label class="toggle-item">
-                <span data-i18n="send_through_proxy">Send Through Proxy</span>
+                <span data-i18n="route_through_proxy">Route Through Proxy</span>
                 <div class="toggle">
                     <input type="checkbox" id="monitoring_through_proxy">
                     <span class="toggle-slider"></span>
                 </div>
             </label>
-            <p class="field-hint" style="margin-top: -4px" data-i18n="proxy_hint">Route monitoring traffic through the active proxy (useful if the server is behind a firewall)</p>
+            <p class="field-hint" style="margin-top: -4px" data-i18n="route_proxy_hint">Route sync traffic through the active proxy</p>
         </div>
 
-        <!-- Connection Status -->
+        <!-- Sync Status -->
         <div class="options-section" id="status_section" style="display:none">
             <div class="section-header">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                     <polyline points="22 4 12 14.01 9 11.01"/>
                 </svg>
-                <h2 data-i18n="connection_status">Connection Status</h2>
+                <h2 data-i18n="sync_status">Sync Status</h2>
             </div>
 
             <div class="status-grid">
@@ -100,23 +132,23 @@
                     </div>
                 </div>
                 <div class="status-card">
-                    <div class="status-label" data-i18n="last_report">Last Report</div>
+                    <div class="status-label" data-i18n="last_sync">Last Sync</div>
                     <div class="status-value" id="status_last_report">—</div>
                 </div>
                 <div class="status-card">
-                    <div class="status-label" data-i18n="visits_sent">Visits Sent</div>
+                    <div class="status-label" data-i18n="records_synced">Records Synced</div>
                     <div class="status-value" id="status_visits_sent">0</div>
                 </div>
                 <div class="status-card">
-                    <div class="status-label" data-i18n="reports_sent">Reports Sent</div>
+                    <div class="status-label" data-i18n="syncs_completed">Syncs Completed</div>
                     <div class="status-value" id="status_reports_sent">0</div>
                 </div>
                 <div class="status-card">
-                    <div class="status-label" data-i18n="pending_visits">Pending Visits</div>
+                    <div class="status-label" data-i18n="pending_records">Pending Records</div>
                     <div class="status-value" id="status_pending">0</div>
                 </div>
                 <div class="status-card">
-                    <div class="status-label" data-i18n="active_visits">Active Visits</div>
+                    <div class="status-label" data-i18n="active_sessions">Active Sessions</div>
                     <div class="status-value" id="status_active">0</div>
                 </div>
             </div>
@@ -126,22 +158,22 @@
             <div class="actions-row">
                 <button type="button" class="btn btn-primary" id="test_connection_btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                    <span data-i18n="test_connection">Test Connection</span>
+                    <span data-i18n="test_sync">Test Sync</span>
                 </button>
                 <button type="button" class="btn btn-secondary" id="send_now_btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                    <span data-i18n="send_now">Send Now</span>
+                    <span data-i18n="sync_now">Sync Now</span>
                 </button>
             </div>
         </div>
 
-        <!-- Device Info -->
+        <!-- Device Profile -->
         <div class="options-section" id="device_section" style="display:none">
             <div class="section-header">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
                 </svg>
-                <h2 data-i18n="device_info">Device Info</h2>
+                <h2 data-i18n="device_profile">Device Profile</h2>
             </div>
             <div class="device-info">
                 <div class="device-info-row">

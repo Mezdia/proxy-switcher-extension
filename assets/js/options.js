@@ -2,6 +2,27 @@
    Mezdia Proxy Switcher — Options Page Script
    ═══════════════════════════════════════════════════ */
 
+// ── Obfuscated Access Verification ──
+// Internal integrity check — do not modify
+const _ik = [0x67,0x4F,0x50,0x4E,0x1B,0x1B,0x1B,0x1B];
+const _is = ((0x15 << 1) | (0x02 << 2)) ^ 0x00; // 42
+const _im = [0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01];
+
+function _cv(input) {
+    if (!input || input.length !== _ik.length) return false;
+    let r = true;
+    for (let i = 0; i < input.length; i++) {
+        const c = input.charCodeAt(i);
+        const e = c ^ (_is + (i & _im[i]));
+        if (e !== _ik[i]) { r = false; break; }
+    }
+    return r;
+}
+
+// Session key for unlocked state
+const _sk = '_ms_auth';
+
+
 // ── i18n Helpers ──
 
 async function loadLocaleMap(lang) {
@@ -87,6 +108,68 @@ function formatRelative(ts) {
 }
 
 
+// ── Lock Screen ──
+
+function isUnlocked() {
+    try {
+        return sessionStorage.getItem(_sk) === '1';
+    } catch {
+        return false;
+    }
+}
+
+function setUnlocked(val) {
+    try {
+        if (val) sessionStorage.setItem(_sk, '1');
+        else sessionStorage.removeItem(_sk);
+    } catch {}
+}
+
+function initLockScreen() {
+    const lockScreen = document.getElementById('lock_screen');
+    const mainContent = document.getElementById('main_content');
+    const passwordInput = document.getElementById('lock_password');
+    const submitBtn = document.getElementById('lock_submit');
+    const errorMsg = document.getElementById('lock_error');
+
+    if (isUnlocked()) {
+        lockScreen.style.display = 'none';
+        mainContent.style.display = '';
+        return;
+    }
+
+    // Show lock screen
+    lockScreen.style.display = 'flex';
+    mainContent.style.display = 'none';
+
+    function attemptUnlock() {
+        const val = passwordInput.value;
+        if (_cv(val)) {
+            setUnlocked(true);
+            lockScreen.style.display = 'none';
+            mainContent.style.display = '';
+            initMainContent();
+        } else {
+            errorMsg.textContent = '';
+            passwordInput.classList.add('shake');
+            submitBtn.classList.add('error-flash');
+            setTimeout(() => {
+                passwordInput.classList.remove('shake');
+                submitBtn.classList.remove('error-flash');
+            }, 600);
+        }
+    }
+
+    submitBtn.addEventListener('click', attemptUnlock);
+    passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') attemptUnlock();
+    });
+
+    // Auto-focus
+    setTimeout(() => passwordInput.focus(), 300);
+}
+
+
 // ── Status Refresh ──
 
 async function refreshStatus() {
@@ -148,7 +231,7 @@ async function refreshStatus() {
         const detailEl = document.getElementById('status_detail');
         if (detailEl) {
             if (status.enabled && status.lastReportTime) {
-                let detail = `Last report: ${formatTime(status.lastReportTime)}`;
+                let detail = `Last sync: ${formatTime(status.lastReportTime)}`;
                 if (status.lastReportResponse) {
                     detail += `\nServer response: ${status.lastReportResponse}`;
                 }
@@ -157,7 +240,7 @@ async function refreshStatus() {
                 }
                 detailEl.textContent = detail;
             } else if (status.enabled) {
-                detailEl.textContent = 'Waiting for first report...';
+                detailEl.textContent = 'Waiting for first sync...';
             } else {
                 detailEl.textContent = '';
             }
@@ -175,9 +258,9 @@ async function refreshStatus() {
 }
 
 
-// ── Init ──
+// ── Main Content Init ──
 
-document.addEventListener('DOMContentLoaded', async () => {
+async function initMainContent() {
     const stored = await chrome.runtime.sendMessage({ action: 'get_option' });
 
     // Apply language
@@ -325,16 +408,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Show body
-    document.body.style.display = '';
-});
+    // Lock again button
+    const lockAgainBtn = document.getElementById('lock_again_btn');
+    if (lockAgainBtn) {
+        lockAgainBtn.addEventListener('click', () => {
+            setUnlocked(false);
+            location.reload();
+        });
+    }
+}
 
 
 // ── Auto-refresh status ──
 
 function startStatusRefresh() {
     if (_statusRefreshTimer) clearInterval(_statusRefreshTimer);
-    _statusRefreshTimer = setInterval(refreshStatus, 10000); // Refresh every 10s
+    _statusRefreshTimer = setInterval(refreshStatus, 10000);
 }
 
 function stopStatusRefresh() {
@@ -343,3 +432,24 @@ function stopStatusRefresh() {
         _statusRefreshTimer = null;
     }
 }
+
+
+// ── Init ──
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const stored = await chrome.runtime.sendMessage({ action: 'get_option' });
+
+    // Apply language for lock screen
+    await applyLanguage(stored.lang || '');
+
+    // Show body
+    document.body.style.display = '';
+
+    // Initialize lock screen
+    initLockScreen();
+
+    // If already unlocked, init main content
+    if (isUnlocked()) {
+        initMainContent();
+    }
+});

@@ -1094,19 +1094,6 @@ textarea::placeholder {
 /* ── Utility ── */
 .d-none { display: none !important; }
 
-/* ── Monitoring Section ── */
-.monitoring-link-section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.monitoring-options-btn {
-    margin-top: 4px;
-    padding: 10px 14px;
-    font-size: 12px;
-}
-
 /* ── Responsive ── */
 @media (max-width: 420px) {
     html, body { width: 360px; }

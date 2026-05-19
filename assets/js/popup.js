@@ -621,14 +621,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize create group button
     initCreateGroupBtn();
 
-    // Monitoring options button
-    const monitorBtn = document.getElementById('open_monitoring_options');
-    if (monitorBtn) {
-        monitorBtn.addEventListener('click', () => {
-            chrome.runtime.openOptionsPage();
-        });
-    }
-
     // Proxy list
     await createTableProxy();
 

@@ -1,7 +1,7 @@
 {
   "name": "__MSG_extName__",
   "description": "__MSG_extDescr__",
-  "version": "3.10.0",
+  "version": "3.11.0",
   "manifest_version": 3,
   "default_locale": "en",
   "permissions": [

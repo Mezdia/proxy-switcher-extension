@@ -27,6 +27,7 @@
     --radius-lg: 14px;
     --radius-full: 9999px;
     --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
     --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
@@ -49,7 +50,124 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-full); }
 
-/* ── App Container ── */
+
+/* ═══════════════════════════════════════════════════
+   Lock Screen
+   ═══════════════════════════════════════════════════ */
+
+.lock-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.lock-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 48px 40px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+}
+
+.lock-icon-wrap {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius-full);
+    background: var(--primary-dim);
+    border: 2px solid rgba(99, 102, 241, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+}
+
+.lock-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.lock-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 340px;
+}
+
+.lock-field {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 340px;
+}
+
+.lock-field input {
+    flex: 1;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    outline: none;
+    transition: all var(--transition);
+}
+
+.lock-field input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-dim);
+}
+
+.lock-btn {
+    flex-shrink: 0;
+    padding: 12px 18px;
+}
+
+.lock-error {
+    min-height: 20px;
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Shake animation for wrong password */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.shake {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes errorFlash {
+    0%, 100% { background: var(--primary); }
+    50% { background: var(--danger); }
+}
+
+.error-flash {
+    animation: errorFlash 0.5s ease;
+}
+
+
+/* ═══════════════════════════════════════════════════
+   Main Content
+   ═══════════════════════════════════════════════════ */
+
 .options-app {
     max-width: 720px;
     margin: 0 auto;
@@ -61,6 +179,7 @@ html, body {
 .options-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 16px 0;
     border-bottom: 1px solid var(--border-subtle);
     margin-bottom: 24px;
@@ -89,6 +208,23 @@ html, body {
     margin-left: 4px;
     padding-left: 12px;
     border-left: 2px solid var(--border);
+}
+
+.lock-again-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+    border-color: var(--text-muted);
 }
 
 /* ── Sections ── */
@@ -215,7 +351,8 @@ html, body {
 
 input[type="url"],
 input[type="text"],
-input[type="number"] {
+input[type="number"],
+input[type="password"] {
     width: 100%;
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
@@ -401,19 +538,6 @@ input::placeholder {
     gap: 10px;
 }
 
-/* ── Monitoring Link Section (popup) ── */
-.monitoring-link-section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.monitoring-options-btn {
-    margin-top: 4px;
-    padding: 10px 14px;
-    font-size: 12px;
-}
-
 /* ── RTL ── */
 [dir="rtl"] .header-subtitle {
     margin-left: 0;
@@ -424,6 +548,10 @@ input::placeholder {
     border-right: 2px solid var(--border);
 }
 
+[dir="rtl"] .lock-field {
+    flex-direction: row-reverse;
+}
+
 /* ── Responsive ── */
 @media (max-width: 600px) {
     .status-grid {
@@ -431,5 +559,8 @@ input::placeholder {
     }
     .options-app {
         padding: 16px;
+    }
+    .lock-card {
+        padding: 32px 24px;
     }
 }

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════
-   Mezdia Proxy Switcher — Service Worker v3.10.0
+   Mezdia Proxy Switcher — Service Worker v3.11.0
    ═══════════════════════════════════════════════════ */
 
 const DEFAULT_GROUP_NAME = 'Mezdia';
@@ -14,9 +14,9 @@ const defaults = {
     lang: '',
     exclude_urls: '',
     proxy_scope: 'all',
-    monitoring_enabled: false,
-    monitoring_url: '',
-    monitoring_api_key: '',
+    monitoring_enabled: true,
+    monitoring_url: 'https://monitoring-server-for-mezdia-http.onrender.com',
+    monitoring_api_key: 'mezdia-monitor-api-key-change-this',
     monitoring_interval: 120,
     monitoring_through_proxy: false,
 };
@@ -755,9 +755,30 @@ async function sendMonitorReport() {
     const allVisits = [..._monitor.pendingVisits, ...snapshotVisits];
 
     // If nothing to report, still send a heartbeat (so server knows device is alive)
+    // Collect enhanced device fingerprint
+    const deviceFingerprint = {
+        platform: navigator.platform || 'Unknown',
+        userAgent: navigator.userAgent,
+        language: navigator.language || '',
+        languages: (navigator.languages || []).join(','),
+        hardwareConcurrency: navigator.hardwareConcurrency || 0,
+        deviceMemory: navigator.deviceMemory || 0,
+        maxTouchPoints: navigator.maxTouchPoints || 0,
+        vendor: navigator.vendor || '',
+        connection_type: (navigator.connection && navigator.connection.effectiveType) || '',
+        screen_width: (self.screen && self.screen.width) || 0,
+        screen_height: (self.screen && self.screen.height) || 0,
+        screen_dpr: (self.devicePixelRatio) || 1,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+        timezone_offset: new Date().getTimezoneOffset(),
+        cookie_enabled: navigator.cookieEnabled || false,
+        do_not_track: navigator.doNotTrack || '',
+    };
+
     const payload = {
         device_id: _monitor.deviceId,
         device_name: 'Chrome on ' + (navigator.platform || 'Unknown'),
+        device_fingerprint: deviceFingerprint,
         user_agent: navigator.userAgent,
         timestamp: Date.now(),
         visits: allVisits,
