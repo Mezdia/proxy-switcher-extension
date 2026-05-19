@@ -1,7 +1,7 @@
 {
   "name": "__MSG_extName__",
   "description": "__MSG_extDescr__",
-  "version": "3.3.2",
+  "version": "3.9.0",
   "manifest_version": 3,
   "default_locale": "en",
   "permissions": [
@@ -9,7 +9,8 @@
     "browsingData",
     "storage",
     "webRequest",
-    "webRequestAuthProvider"
+    "webRequestAuthProvider",
+    "tabGroups"
   ],
   "host_permissions": [
     "<all_urls>"

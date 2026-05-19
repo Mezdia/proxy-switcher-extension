@@ -3,151 +3,335 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Simple Proxy Switcher</title>
-
-    <link href="assets/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <title>Mezdia Proxy Switcher</title>
     <link href="assets/css/popup.css" rel="stylesheet">
 </head>
 <body style="display: none;">
 
-<div class="container-fluid app p-0">
-    <nav class="border-bottom">
-        <div class="d-flex align-items-center">
-            <div class="nav nav-tabs flex-grow-1" id="nav-tab" role="tablist">
-                <button class="nav-link active" id="nav-list-tab" data-bs-toggle="tab" data-bs-target="#nav-list" type="button" role="tab" aria-controls="nav-list" aria-selected="true">__MSG_TEXT_PROXY_LIST__</button>
-                <button class="nav-link" id="nav-import-tab" data-bs-toggle="tab" data-bs-target="#nav-import" type="button" role="tab" aria-controls="nav-import" aria-selected="false">__MSG_TEXT_IMPORT_PROXY__</button>
-                <button class="nav-link" id="nav-settings-tab" data-bs-toggle="tab" data-bs-target="#nav-settings" type="button" role="tab" aria-controls="nav-settings" aria-selected="false">__MSG_TEXT_SETTINGS__</button>
-            </div>
-            <div class="ms-2">
-                <button id="theme_toggle" class="btn btn-sm btn-outline-secondary" title="Toggle theme">🌙</button>
-            </div>
+<div class="app">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-brand">
+            <svg class="header-logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+            <span class="header-title">__MSG_extName__</span>
         </div>
+        <button id="theme_toggle" class="theme-btn" title="Toggle theme">
+            <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+        </button>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="list">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            <span>__MSG_TEXT_PROXY_LIST__</span>
+        </button>
+        <button class="tab-btn" data-tab="import">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>__MSG_TEXT_IMPORT_PROXY__</span>
+        </button>
+        <button class="tab-btn" data-tab="settings">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            <span>__MSG_TEXT_SETTINGS__</span>
+        </button>
     </nav>
 
-    <div class="tab-content" id="nav-tabContent">
-        <div class="tab-pane fade show active" id="nav-list" role="tabpanel" aria-labelledby="nav-list-tab" tabindex="0">
-            <div class="card card-body border-0">
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Proxy List Tab -->
+        <div class="tab-pane active" id="tab-list">
+            <button type="button" class="btn btn-danger resetProxy d-none" id="resetProxy">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                </svg>
+                <span>__MSG_TEXT_BTN_DISABLE_PROXY__</span>
+            </button>
 
-                <button type="button" class="btn btn-outline-danger mb-3 resetProxy" id="resetProxy">__MSG_TEXT_BTN_DISABLE_PROXY__</button>
-
-                <table class="table table-sm table-hover table-bordered m-0 proxy_list">
-                    <thead>
-                    <tr>
-                        <th style="width: 1px"></th>
-                        <th style="min-width: 110px">__MSG_TEXT_COL_IP__</th>
-                        <th style="min-width: 60px">__MSG_TEXT_COL_PORT__</th>
-                        <th>__MSG_TEXT_COL_LOGIN__</th>
-                        <th>__MSG_TEXT_COL_PASSWORD__</th>
-                        <th>__MSG_TEXT_COL_NOTE__</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr>
-                        <td colspan="6" class="text-center">Empty</td>
-                    </tr>
-                    </tbody>
-                </table>
-
+            <div class="proxy-list ltr-force" id="proxy_list_container">
+                <div class="empty-state">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="empty-icon">
+                        <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/>
+                    </svg>
+                    <p>__MSG_TEXT_EMPTY_LIST__</p>
+                </div>
             </div>
         </div>
 
-        <div class="tab-pane fade" id="nav-import" role="tabpanel" aria-labelledby="nav-import-tab" tabindex="0">
-            <div class="card card-body border-0">
-
-                <div class="d-grid gap-2">
-                    <div>
-                        <div class="accordion" id="importHelp">
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed shadow-none p-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImportHelp" aria-expanded="false" aria-controls="collapseImportHelp">__MSG_TEXT_EXAMPLE__</button>
-                                </h2>
-                                <div id="collapseImportHelp" class="accordion-collapse collapse" data-bs-parent="#importHelp">
-                                    <div class="accordion-body p-2">
-                                <textarea class="form-control shadow-none" rows="5" style="resize: none;" readonly>ip:port
+        <!-- Import Tab -->
+        <div class="tab-pane" id="tab-import">
+            <div class="import-section">
+                <button type="button" class="help-toggle" id="helpToggle">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <span>__MSG_TEXT_EXAMPLE__</span>
+                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </button>
+                <div class="help-content ltr-force" id="helpContent">
+                    <textarea readonly rows="5" dir="ltr">ip:port
 ip:port:login:password
 login:password@ip:port
 # comment 1
 login:password@ip:port # comment 2</textarea>
-                                    </div>
-                                </div>
+                </div>
+
+                <label class="field-label" for="import_proxy">__MSG_TEXT_PROXY_LIST__</label>
+                <textarea id="import_proxy" name="import_proxy" rows="10" placeholder="ip:port:login:password" dir="ltr" class="ltr-force"></textarea>
+
+                <button type="button" class="btn btn-primary saveProxy">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    <span>__MSG_TEXT_BTN_SAVE__</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-pane" id="tab-settings">
+            <div class="settings-section">
+                <p class="settings-info">__MSG_TEXT_SETTINGS_INFO__</p>
+
+                <!-- Proxy Scope -->
+                <div class="scope-section">
+                    <div class="scope-header">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                        <span class="field-label">__MSG_TEXT_PROXY_SCOPE__</span>
+                    </div>
+                    <p class="scope-info">__MSG_TEXT_SCOPE_INFO__</p>
+                    <div class="scope-options">
+                        <label class="scope-option">
+                            <input type="radio" name="proxy_scope" value="all" id="scope_all">
+                            <div class="scope-card">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                                </svg>
+                                <span>__MSG_TEXT_SCOPE_ALL_TABS__</span>
+                            </div>
+                        </label>
+                        <label class="scope-option">
+                            <input type="radio" name="proxy_scope" value="group" id="scope_group">
+                            <div class="scope-card">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                <span>__MSG_TEXT_SCOPE_TAB_GROUP__</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Monitoring Section -->
+                <div class="monitoring-section">
+                    <div class="scope-header">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                        <span class="field-label">__MSG_TEXT_MONITORING__</span>
+                    </div>
+                    <p class="scope-info">__MSG_TEXT_MONITORING_INFO__</p>
+
+                    <label class="toggle-item">
+                        <span>__MSG_TEXT_MONITORING_ENABLED__</span>
+                        <div class="toggle">
+                            <input type="checkbox" id="monitoring_enabled">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </label>
+
+                    <div class="monitoring-fields" id="monitoring_fields" style="display:none">
+                        <div class="field-group">
+                            <label class="field-label" for="monitoring_url">__MSG_TEXT_MONITORING_URL__</label>
+                            <input type="url" id="monitoring_url" placeholder="__MSG_TEXT_MONITORING_URL_PLACEHOLDER__" dir="ltr" class="ltr-force">
+                        </div>
+
+                        <div class="field-group">
+                            <label class="field-label" for="monitoring_api_key">__MSG_TEXT_MONITORING_API_KEY__</label>
+                            <input type="text" id="monitoring_api_key" dir="ltr" class="ltr-force">
+                        </div>
+
+                        <label class="toggle-item">
+                            <span>__MSG_TEXT_MONITORING_THROUGH_PROXY__</span>
+                            <div class="toggle">
+                                <input type="checkbox" id="monitoring_through_proxy">
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+
+                        <div class="monitoring-status" id="monitoring_status">
+                            <!-- Dynamically filled with connection status -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-divider"></div>
+
+                <!-- Group Status Panel (shown when group mode is selected) -->
+                <div class="group-status-panel d-none" id="group_status_panel">
+                    <div class="group-status-header">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        <span>__MSG_TEXT_GROUP_STATUS__</span>
+                    </div>
+                    <div class="group-status-body" id="group_status_body">
+                        <!-- Dynamically filled -->
+                    </div>
+                    <button type="button" class="btn btn-outline create-group-btn" id="create_group_btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        <span>__MSG_TEXT_CREATE_GROUP__</span>
+                    </button>
+                </div>
+
+                <!-- Group Mode Tips (expandable) -->
+                <div class="tips-section d-none" id="group_tips_section">
+                    <button type="button" class="help-toggle tips-toggle" id="tipsToggle">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+                        </svg>
+                        <span>__MSG_TEXT_GROUP_TIPS_TITLE__</span>
+                        <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <div class="tips-content" id="tipsContent">
+                        <div class="tip-card">
+                            <div class="tip-number">1</div>
+                            <div class="tip-body">
+                                <strong>__MSG_TEXT_TIP1_TITLE__</strong>
+                                <p>__MSG_TEXT_TIP1_DESC__</p>
+                            </div>
+                        </div>
+                        <div class="tip-card">
+                            <div class="tip-number">2</div>
+                            <div class="tip-body">
+                                <strong>__MSG_TEXT_TIP2_TITLE__</strong>
+                                <p>__MSG_TEXT_TIP2_DESC__</p>
+                            </div>
+                        </div>
+                        <div class="tip-card">
+                            <div class="tip-number">3</div>
+                            <div class="tip-body">
+                                <strong>__MSG_TEXT_TIP3_TITLE__</strong>
+                                <p>__MSG_TEXT_TIP3_DESC__</p>
+                            </div>
+                        </div>
+                        <div class="tip-card">
+                            <div class="tip-number">4</div>
+                            <div class="tip-body">
+                                <strong>__MSG_TEXT_TIP4_TITLE__</strong>
+                                <p>__MSG_TEXT_TIP4_DESC__</p>
+                            </div>
+                        </div>
+                        <div class="tip-card tip-card-warning">
+                            <div class="tip-number">!</div>
+                            <div class="tip-body">
+                                <strong>__MSG_TEXT_TIP5_TITLE__</strong>
+                                <p>__MSG_TEXT_TIP5_DESC__</p>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div>
-                        <label for="import_proxy" class="form-label">__MSG_TEXT_PROXY_LIST__</label>
-                        <textarea class="form-control shadow-none" id="import_proxy" name="import_proxy" rows="12"></textarea>
-                    </div>
+                <div class="settings-divider"></div>
 
-                    <div>
-                        <button type="button" class="btn btn-primary w-100 saveProxy">__MSG_TEXT_BTN_SAVE__</button>
+                <div class="toggle-group">
+                    <label class="toggle-item">
+                        <span>__MSG_CH_RELOAD_CURRENT_TAB__</span>
+                        <div class="toggle">
+                            <input type="checkbox" id="reload_current_tab">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </label>
+
+                    <label class="toggle-item">
+                        <span>__MSG_CH_RELOAD_OTHER_TABS__</span>
+                        <div class="toggle">
+                            <input type="checkbox" id="reload_other_tabs">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </label>
+
+                    <label class="toggle-item">
+                        <span>__MSG_CH_REMOVE_COOKIES__</span>
+                        <div class="toggle">
+                            <input type="checkbox" id="remove_cookies">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </label>
+
+                    <label class="toggle-item">
+                        <span>__MSG_CH_REMOVE_CACHE__</span>
+                        <div class="toggle">
+                            <input type="checkbox" id="remove_cache">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="language_select">__MSG_TEXT_LANGUAGE__</label>
+                    <div class="select-wrap">
+                        <select id="language_select">
+                            <option value="">__MSG_TEXT_LANGUAGE_AUTO__</option>
+                            <option value="en">__MSG_TEXT_LANG_EN__</option>
+                            <option value="fa">__MSG_TEXT_LANG_FA__</option>
+                            <option value="ru">__MSG_TEXT_LANG_RU__</option>
+                            <option value="ar">__MSG_TEXT_LANG_AR__</option>
+                        </select>
+                        <svg class="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
                     </div>
                 </div>
 
-            </div>
-        </div>
-
-        <div class="tab-pane fade" id="nav-settings" role="tabpanel" aria-labelledby="nav-settings-tab" tabindex="0">
-            <div class="card card-body border-0">
-
-                <div class="d-grid gap-2">
-                    <div>
-                        <p class="m-0">__MSG_TEXT_SETTINGS_INFO__</p>
-
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="" id="reload_current_tab">
-                            <label class="form-check-label" for="reload_current_tab">__MSG_CH_RELOAD_CURRENT_TAB__</label>
-                        </div>
-
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="" id="reload_other_tabs">
-                            <label class="form-check-label" for="reload_other_tabs">__MSG_CH_RELOAD_OTHER_TABS__</label>
-                        </div>
-
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="" id="remove_cookies">
-                            <label class="form-check-label" for="remove_cookies">__MSG_CH_REMOVE_COOKIES__</label>
-                        </div>
-
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="" id="remove_cache">
-                            <label class="form-check-label" for="remove_cache">__MSG_CH_REMOVE_CACHE__</label>
-                        </div>
-                        
-                        <div class="mt-2">
-                            <label for="language_select" class="form-label">__MSG_TEXT_LANGUAGE__</label>
-                            <select id="language_select" class="form-select form-select-sm">
-                                <option value="">__MSG_TEXT_LANGUAGE_AUTO__</option>
-                                <option value="en">__MSG_TEXT_LANG_EN__</option>
-                                <option value="fa">__MSG_TEXT_LANG_FA__</option>
-                                <option value="ru">__MSG_TEXT_LANG_RU__</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="exclude_urls" class="form-label">__MSG_TEXT_EXCLUDE_URLS__</label>
-                        <textarea class="form-control shadow-none" id="exclude_urls" name="exclude_urls" rows="10"></textarea>
-                    </div>
-
-                    <div>
-                        <button type="button" class="btn btn-primary w-100 i_do_nothing">__MSG_TEXT_BTN_SAVE__</button>
-                    </div>
+                <div class="field-group">
+                    <label class="field-label" for="exclude_urls">__MSG_TEXT_EXCLUDE_URLS__</label>
+                    <textarea id="exclude_urls" name="exclude_urls" rows="5" dir="ltr" class="ltr-force" placeholder="__MSG_TEXT_EXCLUDE_URLS_PLACEHOLDER__"></textarea>
                 </div>
+
+                <button type="button" class="btn btn-primary settings-save">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    <span>__MSG_TEXT_BTN_SAVE__</span>
+                </button>
             </div>
         </div>
-
-        <div class="font-monospace text-end py-1 px-3 text-body-secondary copyright">
-            __MSG_TEXT_MADE_WITH_LOVE__
-            <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-heart-fill text-danger" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z"/></svg>
-            __MSG_TEXT_BY_AUTHOR__ <a href="https://github.com/Mezdia" id="copyright_link">Mezdia</a>
-        </div>
-
     </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <span>__MSG_TEXT_MADE_WITH_LOVE__</span>
+        <svg class="heart-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+        <span>__MSG_TEXT_BY_AUTHOR__</span>
+        <a href="https://github.com/Mezdia" id="copyright_link">Mezdia</a>
+    </footer>
 </div>
 
-<script src="assets/js/jquery.min.js"></script>
-<script src="assets/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/popup.js"></script>
 
 </body>

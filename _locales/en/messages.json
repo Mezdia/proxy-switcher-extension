@@ -1,77 +1,71 @@
 {
-  "defTitle": {
-    "message": "Simple Proxy Switcher"
-  },
-  "extName": {
-    "message": "Simple Proxy Switcher"
-  },
-  "extDescr": {
-    "message": "Simple Proxy Switcher"
-  },
-  "TEXT_WITH": {
-    "message": "With"
-  },
-  "TEXT_BY": {
-    "message": "by"
-  },
-  "TEXT_PROXY_LIST": {
-    "message": "Proxy"
-  },
-  "TEXT_BTN_DISABLE_PROXY": {
-    "message": "Disable proxy"
-  },
-  "TEXT_IMPORT_PROXY": {
-    "message": "Import"
-  },
-  "TEXT_EXAMPLE": {
-    "message": "Example (only http/s)"
-  },
-  "TEXT_OR": {
-    "message": "or"
-  },
-  "TEXT_BTN_SAVE": {
-    "message": "Save"
-  },
-  "TEXT_SETTINGS": {
-    "message": "Settings"
-  },
-  "TEXT_SETTINGS_INFO": {
-    "message": "These settings will work when the proxy is changed"
-  },
-  "CH_RELOAD_CURRENT_TAB": {
-    "message": "Reload current tab"
-  },
-  "CH_RELOAD_OTHER_TABS": {
-    "message": "Reload all other tabs"
-  },
-  "CH_REMOVE_COOKIES": {
-    "message": "Clear cookies"
-  },
-  "CH_REMOVE_CACHE": {
-    "message": "Clear cache"
-  },
-  "TEXT_EXCLUDE_URLS": {
-    "message": "Exclude URLs"
-  }
-  ,
-  "TEXT_LANGUAGE": {
-    "message": "Language"
-  },
-  "TEXT_LANGUAGE_AUTO": {
-    "message": "Auto (browser)"
-  },
-  "TEXT_LANG_EN": {
-    "message": "English"
-  },
-  "TEXT_LANG_FA": {
-    "message": "Persian (Farsi)"
-  },
+  "defTitle": { "message": "Mezdia Proxy Switcher" },
+  "extName": { "message": "Mezdia Proxy Switcher" },
+  "extDescr": { "message": "Mezdia Proxy Switcher — manage and switch proxies in your browser" },
+  "TEXT_WITH": { "message": "with" },
+  "TEXT_BY": { "message": "by" },
+  "TEXT_PROXY_LIST": { "message": "Proxies" },
+  "TEXT_EMPTY_LIST": { "message": "No proxies added yet. Go to Import tab to add proxies." },
+  "TEXT_BTN_DISABLE_PROXY": { "message": "Disable Proxy" },
+  "TEXT_IMPORT_PROXY": { "message": "Import" },
+  "TEXT_EXAMPLE": { "message": "Example (HTTP/S only)" },
+  "TEXT_OR": { "message": "or" },
+  "TEXT_BTN_SAVE": { "message": "Save" },
+  "TEXT_SETTINGS": { "message": "Settings" },
+  "TEXT_SETTINGS_INFO": { "message": "These settings are applied when switching proxy" },
+  "CH_RELOAD_CURRENT_TAB": { "message": "Reload current tab" },
+  "CH_RELOAD_OTHER_TABS": { "message": "Reload all other tabs" },
+  "CH_REMOVE_COOKIES": { "message": "Remove cookies" },
+  "CH_REMOVE_CACHE": { "message": "Remove cache" },
+  "TEXT_EXCLUDE_URLS": { "message": "Excluded URLs" },
+  "TEXT_EXCLUDE_URLS_PLACEHOLDER": { "message": "Example:\n*.example.com\n192.168.*\nhttps://test.com/*" },
+  "TEXT_LANGUAGE": { "message": "Language" },
+  "TEXT_LANGUAGE_AUTO": { "message": "Auto (Browser)" },
+  "TEXT_LANG_EN": { "message": "English" },
+  "TEXT_LANG_FA": { "message": "Persian" },
   "TEXT_LANG_RU": { "message": "Russian" },
+  "TEXT_LANG_AR": { "message": "Arabic" },
   "TEXT_MADE_WITH_LOVE": { "message": "Made with " },
-  "TEXT_BY_AUTHOR": { "message": " by" },
+  "TEXT_BY_AUTHOR": { "message": " by " },
   "TEXT_COL_IP": { "message": "IP" },
   "TEXT_COL_PORT": { "message": "Port" },
   "TEXT_COL_LOGIN": { "message": "Login" },
   "TEXT_COL_PASSWORD": { "message": "Password" },
-  "TEXT_COL_NOTE": { "message": "Note" }
+  "TEXT_COL_NOTE": { "message": "Note" },
+  "TEXT_PROXY_SCOPE": { "message": "Proxy Scope" },
+  "TEXT_SCOPE_ALL_TABS": { "message": "All Tabs" },
+  "TEXT_SCOPE_TAB_GROUP": { "message": "Mezdia Group" },
+  "TEXT_SCOPE_INFO": { "message": "Choose whether proxy affects the entire browser or only tabs in the Mezdia group" },
+  "TEXT_GROUP_STATUS": { "message": "Group Status" },
+  "TEXT_CREATE_GROUP": { "message": "Create Mezdia Group from Current Tab" },
+  "TEXT_GROUP_TIPS_TITLE": { "message": "Group Mode — Usage Guide" },
+  "TEXT_TIP1_TITLE": { "message": "How It Works" },
+  "TEXT_TIP1_DESC": { "message": "In Group mode, the proxy only applies to websites open in tabs belonging to the Mezdia group. All other tabs connect directly without a proxy. This lets you browse with and without proxy simultaneously." },
+  "TEXT_TIP2_TITLE": { "message": "Creating the Mezdia Group" },
+  "TEXT_TIP2_DESC": { "message": "Click the 'Create Mezdia Group' button above to add the current tab to a new group named Mezdia. You can also right-click any tab, select 'Add tab to group', then name the group exactly 'Mezdia' (case-sensitive)." },
+  "TEXT_TIP3_TITLE": { "message": "Adding More Tabs" },
+  "TEXT_TIP3_DESC": { "message": "To add more tabs, right-click the tab, select 'Add tab to group', and choose the Mezdia group. You can also drag and drop tabs into the group. The proxy will automatically apply to new domains opened in these tabs." },
+  "TEXT_TIP4_TITLE": { "message": "Dynamic Updates" },
+  "TEXT_TIP4_DESC": { "message": "The proxy configuration updates automatically when you add or remove tabs from the Mezdia group, or when a tab navigates to a new domain. Changes take effect within about one second." },
+  "TEXT_TIP5_TITLE": { "message": "Important Note" },
+  "TEXT_TIP5_DESC": { "message": "Proxy routing is based on domain names. If the same domain is open in both a Mezdia tab and a regular tab, the proxy will apply to ALL requests to that domain. For complete separation, use different domains in each context." },
+  "TEXT_GRP_LABEL": { "message": "Mezdia Group" },
+  "TEXT_GRP_ACTIVE": { "message": "✓ Active" },
+  "TEXT_GRP_NOT_FOUND": { "message": "✗ Not Found" },
+  "TEXT_GRP_TABS": { "message": "Tabs in Group" },
+  "TEXT_GRP_DOMAINS": { "message": "Proxied Domains" },
+  "TEXT_GRP_NO_DOMAINS": { "message": "No domains detected yet" },
+  "TEXT_GRP_CREATED": { "message": "✓ Created!" },
+  "TEXT_GRP_ERROR": { "message": "✗ Error" },
+  "TEXT_MONITORING": { "message": "Monitoring" },
+  "TEXT_MONITORING_INFO": { "message": "Track your browsing activity and send it to your monitoring server" },
+  "TEXT_MONITORING_ENABLED": { "message": "Enable Monitoring" },
+  "TEXT_MONITORING_URL": { "message": "Server URL" },
+  "TEXT_MONITORING_URL_PLACEHOLDER": { "message": "https://your-app.onrender.com" },
+  "TEXT_MONITORING_API_KEY": { "message": "API Key" },
+  "TEXT_MONITORING_THROUGH_PROXY": { "message": "Send Through Proxy" },
+  "TEXT_MONITORING_STATUS_CONNECTED": { "message": "✓ Connected to monitoring server" },
+  "TEXT_MONITORING_STATUS_DISCONNECTED": { "message": "✗ Not connected" },
+  "TEXT_MONITORING_STATUS_PENDING": { "message": "⟳ Waiting for first report..." },
+  "TEXT_MONITORING_STATUS_DISABLED": { "message": "Monitoring is disabled" }
 }
