@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════
-   Mezdia Proxy Switcher — Service Worker v3.11.0
+   Mezdia Proxy Switcher — Service Worker v3.12.0
    ═══════════════════════════════════════════════════ */
 
 const DEFAULT_GROUP_NAME = 'Mezdia';
@@ -39,7 +39,7 @@ let _monitor = {
     deviceId: '',
     intervalSec: 120,
 
-    // Active tab visits: tabId -> {url, domain, title, startTime, requests, bytesReceived}
+    // Active tab visits: tabId -> {url, domain, title, startTime, requests, bytesReceived, referrer, tabId, windowId}
     activeVisits: {},
 
     // Completed visits waiting to be sent
@@ -57,6 +57,12 @@ let _monitor = {
 
     // Total reports sent successfully
     totalReportsSent: 0,
+
+    // Error log queue
+    pendingErrors: [],
+
+    // Search query queue
+    pendingSearchQueries: [],
 };
 
 const readJSON = str => {
@@ -409,10 +415,116 @@ initMonitoring().catch(e => console.error('[Mezdia] initial initMonitoring:', e)
 
 
 // ═══════════════════════════════════════════════════
-// ── Monitoring System (using chrome.alarms for reliability) ──
+// ── Monitoring System (Enhanced v3.12.0) ──
 // ═══════════════════════════════════════════════════
 
 const MONITOR_ALARM_NAME = 'mezdia-monitor-report';
+
+/**
+ * Extract search query from common search engine URLs.
+ */
+function extractSearchQuery(url) {
+    if (!url) return '';
+    try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname.toLowerCase();
+
+        // Google
+        if (hostname.includes('google') && urlObj.pathname.includes('search')) {
+            return urlObj.searchParams.get('q') || '';
+        }
+        // Bing
+        if (hostname.includes('bing.com') && urlObj.pathname.includes('search')) {
+            return urlObj.searchParams.get('q') || '';
+        }
+        // DuckDuckGo
+        if (hostname.includes('duckduckgo.com')) {
+            return urlObj.searchParams.get('q') || '';
+        }
+        // Yahoo
+        if (hostname.includes('yahoo.com') && urlObj.pathname.includes('search')) {
+            return urlObj.searchParams.get('p') || '';
+        }
+        // Baidu
+        if (hostname.includes('baidu.com') && urlObj.pathname.includes('s')) {
+            return urlObj.searchParams.get('wd') || urlObj.searchParams.get('word') || '';
+        }
+        // Yandex
+        if (hostname.includes('yandex.com') && urlObj.pathname.includes('search')) {
+            return urlObj.searchParams.get('text') || '';
+        }
+    } catch {}
+    return '';
+}
+
+/**
+ * Detect search engine name from URL.
+ */
+function detectSearchEngine(url) {
+    if (!url) return '';
+    try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        if (hostname.includes('google')) return 'google';
+        if (hostname.includes('bing.com')) return 'bing';
+        if (hostname.includes('duckduckgo')) return 'duckduckgo';
+        if (hostname.includes('yahoo.com')) return 'yahoo';
+        if (hostname.includes('baidu.com')) return 'baidu';
+        if (hostname.includes('yandex.com')) return 'yandex';
+    } catch {}
+    return '';
+}
+
+/**
+ * Parse user agent string for browser/OS info (basic, for SW context).
+ */
+function parseUserAgent(ua) {
+    const result = { browser_name: '', browser_version: '', os_name: '', os_version: '', is_mobile: false, is_tablet: false };
+
+    if (!ua) return result;
+
+    // OS detection
+    if (/Windows NT (\d+[\.\d]*)/.test(ua)) {
+        result.os_name = 'Windows';
+        result.os_version = RegExp.$1;
+    } else if (/Mac OS X (\d+[._]\d+[._]?\d*)/.test(ua)) {
+        result.os_name = 'macOS';
+        result.os_version = RegExp.$1.replace(/_/g, '.');
+    } else if (/Linux/.test(ua)) {
+        result.os_name = 'Linux';
+    } else if (/Android (\d+[\.\d]*)/.test(ua)) {
+        result.os_name = 'Android';
+        result.os_version = RegExp.$1;
+        result.is_mobile = true;
+    } else if (/iPhone OS (\d+[_\d]*)/.test(ua)) {
+        result.os_name = 'iOS';
+        result.os_version = RegExp.$1.replace(/_/g, '.');
+        result.is_mobile = true;
+    } else if (/iPad.*OS (\d+[_\d]*)/.test(ua)) {
+        result.os_name = 'iOS';
+        result.os_version = RegExp.$1.replace(/_/g, '.');
+        result.is_tablet = true;
+    }
+
+    // Browser detection
+    if (/Edg\/(\d+[\.\d]*)/.test(ua)) {
+        result.browser_name = 'Edge';
+        result.browser_version = RegExp.$1;
+    } else if (/OPR\/(\d+[\.\d]*)/.test(ua) || /Opera\/(\d+[\.\d]*)/.test(ua)) {
+        result.browser_name = 'Opera';
+        result.browser_version = RegExp.$1;
+    } else if (/Chrome\/(\d+[\.\d]*)/.test(ua) && !/Edg/.test(ua)) {
+        result.browser_name = 'Chrome';
+        result.browser_version = RegExp.$1;
+    } else if (/Firefox\/(\d+[\.\d]*)/.test(ua)) {
+        result.browser_name = 'Firefox';
+        result.browser_version = RegExp.$1;
+    } else if (/Safari\/(\d+[\.\d]*)/.test(ua) && /Version\/(\d+[\.\d]*)/.test(ua)) {
+        result.browser_name = 'Safari';
+        result.browser_version = RegExp.$1;
+    }
+
+    return result;
+}
 
 /**
  * Initialize monitoring: load settings, generate deviceId if needed,
@@ -447,6 +559,22 @@ async function initMonitoring() {
             _monitor.pendingVisits = JSON.parse(monitoring_pending);
         } catch {
             _monitor.pendingVisits = [];
+        }
+
+        // Load saved pending errors
+        const {monitoring_pending_errors = '[]'} = await chrome.storage.local.get('monitoring_pending_errors');
+        try {
+            _monitor.pendingErrors = JSON.parse(monitoring_pending_errors);
+        } catch {
+            _monitor.pendingErrors = [];
+        }
+
+        // Load saved pending search queries
+        const {monitoring_pending_searches = '[]'} = await chrome.storage.local.get('monitoring_pending_searches');
+        try {
+            _monitor.pendingSearchQueries = JSON.parse(monitoring_pending_searches);
+        } catch {
+            _monitor.pendingSearchQueries = [];
         }
 
         // Load saved report stats
@@ -612,6 +740,7 @@ function monitorHeadersReceived(details) {
 
 /**
  * Start tracking a page visit for a tab.
+ * Enhanced with referrer, tab/window IDs, and search query extraction.
  */
 function monitorTabVisitStart(tabId, tab) {
     if (!_monitor.enabled) return;
@@ -640,6 +769,16 @@ function monitorTabVisitStart(tabId, tab) {
         query = urlObj.search || '';
     } catch {}
 
+    // Extract search query from URL
+    const searchQuery = extractSearchQuery(tab.url);
+
+    // Get the previous visit's URL as referrer (if same tab)
+    const previousVisit = _monitor.activeVisits[tabId];
+    const referrer = previousVisit ? previousVisit.url : '';
+
+    // Get window ID if available
+    const windowId = tab.windowId ? String(tab.windowId) : '';
+
     _monitor.activeVisits[tabId] = {
         url: tab.url,
         domain: domain,
@@ -649,12 +788,29 @@ function monitorTabVisitStart(tabId, tab) {
         startTime: Date.now(),
         requests: 0,
         bytesReceived: 0,
+        referrer: referrer,
+        tabId: tabId,
+        windowId: windowId,
+        searchQuery: searchQuery,
     };
+
+    // If this is a search engine visit, queue the search query
+    if (searchQuery) {
+        const engine = detectSearchEngine(tab.url);
+        _monitor.pendingSearchQueries.push({
+            query: searchQuery,
+            engine: engine,
+            url: tab.url,
+            timestamp: Date.now(),
+        });
+        savePendingData();
+    }
 }
 
 
 /**
  * End tracking a page visit and add to pending list.
+ * Enhanced with visit_end_time and is_active flag.
  */
 function monitorTabVisitEnd(tabId) {
     if (!_monitor.enabled) return;
@@ -662,7 +818,8 @@ function monitorTabVisitEnd(tabId) {
     const visit = _monitor.activeVisits[tabId];
     if (!visit) return;
 
-    const durationSec = Math.round((Date.now() - visit.startTime) / 1000);
+    const now = Date.now();
+    const durationSec = Math.round((now - visit.startTime) / 1000);
 
     // Only add visits that lasted at least 1 second
     if (durationSec >= 1) {
@@ -672,14 +829,20 @@ function monitorTabVisitEnd(tabId) {
             path: visit.path || '/',
             query: visit.query || '',
             title: visit.title,
-            visit_time: Math.round(visit.startTime / 1000),
+            visit_time: visit.startTime,
             duration_sec: durationSec,
             requests_count: visit.requests,
             bytes_received: visit.bytesReceived,
+            referrer: visit.referrer || '',
+            tab_id: visit.tabId || null,
+            window_id: visit.windowId || '',
+            visit_end_time: now,
+            is_active: false,
+            search_query: visit.searchQuery || '',
         });
 
         // Persist pending visits to storage (for SW restart survival)
-        savePendingVisits();
+        savePendingData();
     }
 
     delete _monitor.activeVisits[tabId];
@@ -687,15 +850,17 @@ function monitorTabVisitEnd(tabId) {
 
 
 /**
- * Save pending visits to chrome.storage.local (debounced).
+ * Save all pending data to chrome.storage.local (debounced).
  */
 let _savePendingTimer = null;
-function savePendingVisits() {
+function savePendingData() {
     if (_savePendingTimer) clearTimeout(_savePendingTimer);
     _savePendingTimer = setTimeout(() => {
         chrome.storage.local.set({
-            monitoring_pending: JSON.stringify(_monitor.pendingVisits.slice(-500)) // Keep max 500
-        }).catch(e => console.warn('[Mezdia] savePendingVisits error:', e));
+            monitoring_pending: JSON.stringify(_monitor.pendingVisits.slice(-500)),
+            monitoring_pending_errors: JSON.stringify(_monitor.pendingErrors.slice(-100)),
+            monitoring_pending_searches: JSON.stringify(_monitor.pendingSearchQueries.slice(-200)),
+        }).catch(e => console.warn('[Mezdia] savePendingData error:', e));
     }, 2000);
 }
 
@@ -717,8 +882,22 @@ function saveReportStats() {
 
 
 /**
+ * Log an error from the extension.
+ */
+function logExtensionError(errorType, errorMessage, url) {
+    _monitor.pendingErrors.push({
+        error_type: errorType || 'unknown',
+        error_message: errorMessage || '',
+        url: url || '',
+        timestamp: Date.now(),
+    });
+    savePendingData();
+}
+
+
+/**
  * Send accumulated monitoring data to the server.
- * Called by chrome.alarms listener.
+ * Enhanced with search queries, error logs, and referrer data.
  */
 async function sendMonitorReport() {
     if (!_monitor.enabled || !_monitor.serverUrl) return;
@@ -738,10 +917,16 @@ async function sendMonitorReport() {
                     path: visit.path || '/',
                     query: visit.query || '',
                     title: visit.title,
-                    visit_time: Math.round(visit.startTime / 1000),
+                    visit_time: visit.startTime,
                     duration_sec: durationSec,
                     requests_count: visit.requests,
                     bytes_received: visit.bytesReceived,
+                    referrer: visit.referrer || '',
+                    tab_id: visit.tabId || null,
+                    window_id: visit.windowId || '',
+                    visit_end_time: null,
+                    is_active: true,
+                    search_query: visit.searchQuery || '',
                 });
             }
             // Reset counters for next interval (keep the visit active)
@@ -754,7 +939,9 @@ async function sendMonitorReport() {
     // Combine pending + snapshot
     const allVisits = [..._monitor.pendingVisits, ...snapshotVisits];
 
-    // If nothing to report, still send a heartbeat (so server knows device is alive)
+    // Parse UA for device info
+    const uaInfo = parseUserAgent(navigator.userAgent);
+
     // Collect enhanced device fingerprint
     const deviceFingerprint = {
         platform: navigator.platform || 'Unknown',
@@ -787,12 +974,18 @@ async function sendMonitorReport() {
             requests: data.requests,
             bytes_received: data.bytesReceived,
         })),
+        // New: send search queries
+        search_queries: _monitor.pendingSearchQueries,
+        // New: send error logs
+        errors: _monitor.pendingErrors,
     };
 
-    // Clear pending and domainTraffic AFTER building payload
+    // Clear pending data AFTER building payload
     _monitor.pendingVisits = [];
     _monitor.domainTraffic = {};
-    savePendingVisits();
+    _monitor.pendingSearchQueries = [];
+    _monitor.pendingErrors = [];
+    savePendingData();
 
     try {
         const reportUrl = _monitor.serverUrl.replace(/\/+$/, '') + '/api/report';
@@ -830,7 +1023,7 @@ async function sendMonitorReport() {
         } else {
             // Server error — put visits back in pending
             _monitor.pendingVisits = allVisits;
-            savePendingVisits();
+            savePendingData();
 
             _monitor.lastReportStatus = 'error';
             _monitor.lastReportTime = Date.now();
@@ -842,7 +1035,7 @@ async function sendMonitorReport() {
     } catch (e) {
         // Network error — put visits back in pending
         _monitor.pendingVisits = allVisits;
-        savePendingVisits();
+        savePendingData();
 
         _monitor.lastReportStatus = 'error';
         _monitor.lastReportTime = Date.now();
@@ -886,7 +1079,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         // Monitoring: track tab visit changes
         if (_monitor.enabled) {
             if (changeInfo.url) {
+                // End previous visit on same tab (navigation = visit end)
                 monitorTabVisitEnd(tabId);
+                // Start new visit with current URL
                 monitorTabVisitStart(tabId, tab);
             } else if (changeInfo.status === 'complete' && tab.url) {
                 if (_monitor.activeVisits[tabId] && tab.title) {
@@ -905,6 +1100,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     refreshGroupProxy();
 
     if (_monitor.enabled) {
+        // Tab closed = visit end
         monitorTabVisitEnd(tabId);
     }
 });
@@ -1138,6 +1334,8 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
                 totalReportsSent: _monitor.totalReportsSent,
                 pendingVisitsCount: _monitor.pendingVisits.length,
                 activeVisitsCount: Object.keys(_monitor.activeVisits).length,
+                pendingErrorsCount: _monitor.pendingErrors.length,
+                pendingSearchQueriesCount: _monitor.pendingSearchQueries.length,
                 deviceId: _monitor.deviceId,
             });
             return true;
@@ -1176,12 +1374,12 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
                     if (res.ok) {
                         _monitor.lastReportStatus = 'success';
                         _monitor.lastReportTime = Date.now();
-                        _monitor.lastReportResponse = 'Connection test successful';
+                        _monitor.lastReportResponse = 'Connection test OK';
                         saveReportStats();
-                        sendResponse({status: 'ok', connected: true});
+                        sendResponse({status: 'ok', message: 'Connection successful', httpStatus: res.status});
                     } else {
-                        const errText = await res.text().catch(() => '');
-                        sendResponse({status: 'ok', connected: false, httpStatus: res.status, error: errText.substring(0, 100)});
+                        const text = await res.text().catch(() => '');
+                        sendResponse({status: 'error', message: `HTTP ${res.status}`, detail: text.substring(0, 100)});
                     }
                 } catch (e) {
                     sendResponse({status: 'error', message: e.message});
@@ -1190,17 +1388,43 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
             return true;
         }
 
-        case 'send_monitor_report_now': {
-            sendMonitorReport().then(() => {
-                sendResponse({status: 'ok', reportStatus: _monitor.lastReportStatus});
-            }).catch(e => {
-                sendResponse({status: 'error', message: e.message});
-            });
+        case 'monitor_log_error': {
+            if (_monitor.enabled) {
+                logExtensionError(req.error_type, req.error_message, req.url);
+                sendResponse({status: 'ok'});
+            } else {
+                sendResponse({status: 'error', message: 'Monitoring not enabled'});
+            }
+            return true;
+        }
+
+        case 'monitor_visit_end': {
+            if (_monitor.enabled && req.tabId) {
+                monitorTabVisitEnd(req.tabId);
+                sendResponse({status: 'ok'});
+            } else {
+                sendResponse({status: 'error', message: 'Monitoring not enabled or no tabId'});
+            }
             return true;
         }
 
         default:
-            sendResponse({status: 'error', message: 'Unknown action'});
-            return false;
+            break;
+    }
+});
+
+
+// ── Global Error Handler for Monitoring ──
+// Catches unhandled errors and logs them
+
+self.addEventListener('error', (event) => {
+    if (_monitor.enabled) {
+        logExtensionError('global_error', event.message || 'Unknown error', event.filename || '');
+    }
+});
+
+self.addEventListener('unhandledrejection', (event) => {
+    if (_monitor.enabled) {
+        logExtensionError('unhandled_promise', event.reason?.message || 'Unhandled promise rejection', '');
     }
 });
