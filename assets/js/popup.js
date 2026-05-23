@@ -595,6 +595,9 @@ function initCreateGroupBtn() {
 
 // ── Exclude URLs Tag-Box Helpers ──
 
+// Global state for exclude tags (must be global so helper functions can access it)
+let excludeTags = [];
+
 function addExcludeTags(text) {
     if (!text) return;
     // Split by comma, newline, or semicolon; trim spaces; filter empty
@@ -614,13 +617,17 @@ function addExcludeTags(text) {
     });
 
     // Add only unique entries
+    let changed = false;
     for (const entry of cleaned) {
         if (!excludeTags.includes(entry)) {
             excludeTags.push(entry);
+            changed = true;
         }
     }
-    renderExcludeTags();
-    saveExcludeTags();
+    if (changed) {
+        renderExcludeTags();
+        saveExcludeTags();
+    }
 }
 
 function removeExcludeTag(index) {
@@ -650,7 +657,10 @@ function renderExcludeTags() {
 }
 
 function saveExcludeTags() {
-    chrome.runtime.sendMessage({ action: 'set_option', key: 'exclude_urls', val: JSON.stringify(excludeTags) });
+    chrome.runtime.sendMessage({ action: 'set_option', key: 'exclude_urls', val: JSON.stringify(excludeTags) }, () => {
+        // After saving, re-apply the current proxy so the PAC script gets updated
+        chrome.runtime.sendMessage({ action: 'reapply_proxy' });
+    });
 }
 
 
@@ -722,8 +732,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // Exclude URLs — Tag Box
-    let excludeTags = [];
+    // Exclude URLs — Tag Box (populate global excludeTags)
     try {
         const raw = stored.exclude_urls || '[]';
         let parsed;
