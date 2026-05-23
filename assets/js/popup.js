@@ -95,7 +95,8 @@ function applyLtrForce() {
 
     const ltrSelectors = [
         '#import_proxy',
-        '#exclude_urls',
+        '#exclude_urls_input',
+        '#exclude_urls_box',
         '.help-content textarea',
     ];
 
@@ -592,6 +593,67 @@ function initCreateGroupBtn() {
 }
 
 
+// ── Exclude URLs Tag-Box Helpers ──
+
+function addExcludeTags(text) {
+    if (!text) return;
+    // Split by comma, newline, or semicolon; trim spaces; filter empty
+    const newEntries = text.split(/[,\n;]+/)
+        .map(s => s.trim().toLowerCase())
+        .filter(s => s.length > 0);
+
+    // Remove protocol prefix if user pasted full URLs (we match by domain)
+    const cleaned = newEntries.map(e => {
+        try {
+            // If it looks like a URL, extract hostname
+            if (e.startsWith('http://') || e.startsWith('https://')) {
+                return new URL(e).hostname;
+            }
+        } catch {}
+        return e;
+    });
+
+    // Add only unique entries
+    for (const entry of cleaned) {
+        if (!excludeTags.includes(entry)) {
+            excludeTags.push(entry);
+        }
+    }
+    renderExcludeTags();
+    saveExcludeTags();
+}
+
+function removeExcludeTag(index) {
+    excludeTags.splice(index, 1);
+    renderExcludeTags();
+    saveExcludeTags();
+}
+
+function renderExcludeTags() {
+    const container = document.getElementById('exclude_urls_tags');
+    if (!container) return;
+    container.innerHTML = '';
+    excludeTags.forEach((tag, index) => {
+        const tagEl = document.createElement('span');
+        tagEl.className = 'tag-item';
+        tagEl.innerHTML = `<span class="tag-text">${tag}</span><button type="button" class="tag-remove" data-index="${index}" title="Remove">&times;</button>`;
+        container.appendChild(tagEl);
+    });
+    // Attach remove handlers
+    container.querySelectorAll('.tag-remove').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const idx = parseInt(this.dataset.index);
+            removeExcludeTag(idx);
+        });
+    });
+}
+
+function saveExcludeTags() {
+    chrome.runtime.sendMessage({ action: 'set_option', key: 'exclude_urls', val: JSON.stringify(excludeTags) });
+}
+
+
 // ── Init ──
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -660,12 +722,57 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // Exclude URLs
-    const excludeUrls = document.getElementById('exclude_urls');
-    if (excludeUrls) {
-        excludeUrls.value = stored.exclude_urls || '';
-        excludeUrls.addEventListener('change', function () {
-            chrome.runtime.sendMessage({ action: 'set_option', key: 'exclude_urls', val: this.value.trim() });
+    // Exclude URLs — Tag Box
+    let excludeTags = [];
+    try {
+        const raw = stored.exclude_urls || '[]';
+        let parsed;
+        try {
+            parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) parsed = [];
+        } catch {
+            // Backward compat: old format was newline-separated string
+            parsed = String(raw).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        }
+        excludeTags = parsed;
+    } catch {
+        excludeTags = [];
+    }
+
+    renderExcludeTags();
+
+    const excludeInput = document.getElementById('exclude_urls_input');
+    const excludeBox = document.getElementById('exclude_urls_box');
+
+    // Click on tag-box should focus the input
+    if (excludeBox && excludeInput) {
+        excludeBox.addEventListener('click', function (e) {
+            if (e.target === excludeBox || e.target.closest('.tag-list')) {
+                excludeInput.focus();
+            }
+        });
+    }
+
+    if (excludeInput) {
+        excludeInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                addExcludeTags(this.value);
+                this.value = '';
+            }
+            if (e.key === 'Backspace' && !this.value && excludeTags.length > 0) {
+                excludeTags.pop();
+                renderExcludeTags();
+                saveExcludeTags();
+            }
+        });
+
+        // Also handle paste (comma or newline separated)
+        excludeInput.addEventListener('paste', function (e) {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text');
+            addExcludeTags(paste);
+            this.value = '';
         });
     }
 
@@ -708,9 +815,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const settingsSaveBtn = document.querySelector('.settings-save');
     if (settingsSaveBtn) {
         settingsSaveBtn.addEventListener('click', async () => {
-            if (excludeUrls) {
-                await chrome.runtime.sendMessage({ action: 'set_option', key: 'exclude_urls', val: excludeUrls.value.trim() });
-            }
+            // Tags are already saved on each change; this button is for visual feedback
             settingsSaveBtn.style.transform = 'scale(0.97)';
             setTimeout(() => { settingsSaveBtn.style.transform = ''; }, 150);
         });

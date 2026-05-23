@@ -85,11 +85,16 @@
                     </svg>
                 </button>
                 <div class="help-content ltr-force" id="helpContent">
-                    <textarea readonly rows="5" dir="ltr">ip:port
+                    <textarea readonly rows="6" dir="ltr">ip:port
 ip:port:login:password
 login:password@ip:port
 # comment 1
-login:password@ip:port # comment 2</textarea>
+login:password@ip:port # comment 2
+
+Excluded URLs — Tag Input:
+Type a domain (e.g. jj.com) and press Enter.
+Separate multiple with comma: jj.com, z.ai
+Spaces are ignored. Click × to remove a tag.</textarea>
                 </div>
 
                 <label class="field-label" for="import_proxy">__MSG_TEXT_PROXY_LIST__</label>
@@ -264,8 +269,12 @@ login:password@ip:port # comment 2</textarea>
                 </div>
 
                 <div class="field-group">
-                    <label class="field-label" for="exclude_urls">__MSG_TEXT_EXCLUDE_URLS__</label>
-                    <textarea id="exclude_urls" name="exclude_urls" rows="5" dir="ltr" class="ltr-force" placeholder="__MSG_TEXT_EXCLUDE_URLS_PLACEHOLDER__"></textarea>
+                    <label class="field-label">__MSG_TEXT_EXCLUDE_URLS__</label>
+                    <div class="tag-box ltr-force" id="exclude_urls_box">
+                        <div class="tag-list" id="exclude_urls_tags"></div>
+                        <input type="text" id="exclude_urls_input" dir="ltr" class="tag-input ltr-force" placeholder="__MSG_TEXT_EXCLUDE_URLS_PLACEHOLDER__">
+                    </div>
+                    <p class="field-hint">__MSG_TEXT_EXCLUDE_URLS_HINT__</p>
                 </div>
 
                 <button type="button" class="btn btn-primary settings-save">

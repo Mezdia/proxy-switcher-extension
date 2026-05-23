@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════
-   Mezdia Proxy Switcher — Service Worker v3.12.0
+   Mezdia Proxy Switcher — Service Worker v3.12.1
    ═══════════════════════════════════════════════════ */
 
 const DEFAULT_GROUP_NAME = 'Mezdia';
@@ -12,7 +12,7 @@ const defaults = {
     remove_cookies: false,
     remove_cache: false,
     lang: '',
-    exclude_urls: '',
+    exclude_urls: '[]',
     proxy_scope: 'all',
     monitoring_enabled: true,
     monitoring_url: 'https://monitoring-server-for-mezdia-http.onrender.com',
@@ -244,9 +244,32 @@ async function getMezdiaGroupDomains() {
 
 // ── PAC Script Builders ──
 
-function buildGroupPacScript(proxyHost, proxyPort, domains, excludePatterns) {
+/**
+ * Classify exclude entries into plain domains and wildcard patterns.
+ * Plain domains like "jj.com" are matched with dnsDomainIs (exact + subdomains).
+ * Wildcard patterns like "*.example.com" or "https://test.com/*" use shExpMatch.
+ */
+function classifyExcludeEntries(entries) {
+    const domains = [];
+    const patterns = [];
+    for (const entry of (entries || [])) {
+        if (!entry || typeof entry !== 'string') continue;
+        const trimmed = entry.trim();
+        if (!trimmed) continue;
+        // If it contains * or / or : it's a wildcard/URL pattern
+        if (trimmed.includes('*') || trimmed.includes('/') || trimmed.includes(':')) {
+            patterns.push(trimmed);
+        } else {
+            // Plain domain — match exact and subdomains
+            domains.push(trimmed);
+        }
+    }
+    return { domains, patterns };
+}
+
+function buildGroupPacScript(proxyHost, proxyPort, domains, excludeEntries) {
     let safeDomains = (domains || []).filter(d => d && typeof d === 'string');
-    const safeExcludes = (excludePatterns || []).filter(p => p && typeof p === 'string');
+    const { domains: excludeDomains, patterns: excludePatterns } = classifyExcludeEntries(excludeEntries);
 
     if (_monitor.throughProxy && _monitor.serverUrl) {
         try {
@@ -260,15 +283,23 @@ function buildGroupPacScript(proxyHost, proxyPort, domains, excludePatterns) {
     }
 
     const jsonDomains = JSON.stringify(safeDomains);
-    const jsonExcludes = JSON.stringify(safeExcludes);
+    const jsonExDomains = JSON.stringify(excludeDomains);
+    const jsonExPatterns = JSON.stringify(excludePatterns);
 
     return `function FindProxyForURL(url, host) {
   var proxiedDomains = ${jsonDomains};
-  var excludePats = ${jsonExcludes};
+  var excludeDomains = ${jsonExDomains};
+  var excludePatterns = ${jsonExPatterns};
   var i, j;
 
-  for (i = 0; i < excludePats.length; i++) {
-    if (shExpMatch(url, excludePats[i]) || shExpMatch(host, excludePats[i])) {
+  for (i = 0; i < excludePatterns.length; i++) {
+    if (shExpMatch(url, excludePatterns[i]) || shExpMatch(host, excludePatterns[i])) {
+      return "DIRECT";
+    }
+  }
+
+  for (i = 0; i < excludeDomains.length; i++) {
+    if (host === excludeDomains[i] || dnsDomainIs(host, "." + excludeDomains[i])) {
       return "DIRECT";
     }
   }
@@ -288,15 +319,23 @@ function buildGroupPacScript(proxyHost, proxyPort, domains, excludePatterns) {
 }
 
 
-function buildAllTabsPacScript(proxyHost, proxyPort, excludePatterns) {
-    const safeExcludes = (excludePatterns || []).filter(p => p && typeof p === 'string');
-    const jsonPatterns = JSON.stringify(safeExcludes);
+function buildAllTabsPacScript(proxyHost, proxyPort, excludeEntries) {
+    const { domains: excludeDomains, patterns: excludePatterns } = classifyExcludeEntries(excludeEntries);
+    const jsonExDomains = JSON.stringify(excludeDomains);
+    const jsonExPatterns = JSON.stringify(excludePatterns);
     return `function FindProxyForURL(url, host) {
-  var pats = ${jsonPatterns};
+  var excludeDomains = ${jsonExDomains};
+  var excludePatterns = ${jsonExPatterns};
   var i;
 
-  for (i = 0; i < pats.length; i++) {
-    if (shExpMatch(url, pats[i]) || shExpMatch(host, pats[i])) {
+  for (i = 0; i < excludePatterns.length; i++) {
+    if (shExpMatch(url, excludePatterns[i]) || shExpMatch(host, excludePatterns[i])) {
+      return "DIRECT";
+    }
+  }
+
+  for (i = 0; i < excludeDomains.length; i++) {
+    if (host === excludeDomains[i] || dnsDomainIs(host, "." + excludeDomains[i])) {
       return "DIRECT";
     }
   }
@@ -309,17 +348,24 @@ function buildAllTabsPacScript(proxyHost, proxyPort, excludePatterns) {
 // ── Apply / Disable Proxy ──
 
 async function applyProxy({ip, port, user = '', pass = ''}, withSideFx = true) {
-    const {exclude_urls = '', proxy_scope = 'all'} = await chrome.storage.local.get(['exclude_urls', 'proxy_scope']);
-    const patterns = exclude_urls.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const {exclude_urls = '[]', proxy_scope = 'all'} = await chrome.storage.local.get(['exclude_urls', 'proxy_scope']);
+    let entries;
+    try {
+        entries = JSON.parse(exclude_urls);
+        if (!Array.isArray(entries)) entries = [];
+    } catch {
+        // Backward compat: old format was newline-separated string
+        entries = String(exclude_urls).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    }
 
     let pacData;
     const proxyHost = ip, proxyPort = Number(port);
 
     if (proxy_scope === 'group') {
         const domains = await getMezdiaGroupDomains();
-        pacData = buildGroupPacScript(proxyHost, proxyPort, domains, patterns);
+        pacData = buildGroupPacScript(proxyHost, proxyPort, domains, entries);
     } else {
-        pacData = buildAllTabsPacScript(proxyHost, proxyPort, patterns);
+        pacData = buildAllTabsPacScript(proxyHost, proxyPort, entries);
     }
 
     const config = {mode: 'pac_script', pacScript: {data: pacData}};
@@ -415,7 +461,7 @@ initMonitoring().catch(e => console.error('[Mezdia] initial initMonitoring:', e)
 
 
 // ═══════════════════════════════════════════════════
-// ── Monitoring System (Enhanced v3.12.0) ──
+// ── Monitoring System (Enhanced v3.12.1) ──
 // ═══════════════════════════════════════════════════
 
 const MONITOR_ALARM_NAME = 'mezdia-monitor-report';
