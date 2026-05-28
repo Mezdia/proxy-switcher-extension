@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════
-   Mezdia Proxy Switcher — Popup Script (Vanilla JS) v3.9.0
+   Mezdia Proxy Switcher — Popup Script (Vanilla JS) v4.0
    ═══════════════════════════════════════════════════ */
 
 // ── i18n Helpers ──
@@ -18,18 +18,11 @@ async function loadLocaleMap(lang) {
     }
 }
 
-/**
- * Get a translated message for a given key.
- */
 function getMessage(map, key) {
     if (map && map[key]) return map[key];
     try { return chrome.i18n.getMessage(key) || ''; } catch { return ''; }
 }
 
-/**
- * Apply i18n to the entire document (only called ONCE on initial load).
- * This replaces __MSG_ placeholders in the static HTML.
- */
 function applyI18n(map) {
     const html = document.documentElement;
     html.innerHTML = html.innerHTML.replace(/__MSG_(\w+)__/g, (_, key) => {
@@ -40,7 +33,6 @@ function applyI18n(map) {
         const key = el.dataset.i18n;
         const msg = getMessage(map, key);
         if (!msg) return;
-
         if (el instanceof HTMLInputElement) {
             if (el.placeholder) el.placeholder = msg;
             else if (el.value) el.value = msg;
@@ -50,10 +42,6 @@ function applyI18n(map) {
     });
 }
 
-/**
- * Apply i18n to a specific element only (for dynamic content).
- * This avoids destroying event listeners on the rest of the page.
- */
 function applyI18nToElement(el, map) {
     if (!el) return;
     el.innerHTML = el.innerHTML.replace(/__MSG_(\w+)__/g, (_, key) => {
@@ -70,7 +58,6 @@ async function applyLanguage(lang) {
         html.dir = 'ltr';
         html.lang = lang;
     } else {
-        // Auto: check browser language
         const browserLang = navigator.language || 'en';
         if (browserLang.startsWith('fa') || browserLang.startsWith('ar')) {
             html.dir = 'rtl';
@@ -82,22 +69,19 @@ async function applyLanguage(lang) {
 
     const map = await loadLocaleMap(lang);
     applyI18n(map);
-
-    // After i18n, apply LTR force to technical elements
     applyLtrForce();
 }
 
-/**
- * In RTL mode, ensure technical elements remain LTR.
- */
 function applyLtrForce() {
     const isRtl = document.documentElement.dir === 'rtl';
-
     const ltrSelectors = [
         '#import_proxy',
         '#exclude_urls_input',
         '#exclude_urls_box',
-        '.help-content textarea',
+        '.help-content .help-card textarea',
+        '#single_ip', '#single_port', '#single_user', '#single_pass', '#single_note',
+        '#edit_ip', '#edit_port', '#edit_user', '#edit_pass', '#edit_note',
+        '#proxy_search',
     ];
 
     ltrSelectors.forEach(sel => {
@@ -133,7 +117,6 @@ function initTabs() {
             const pane = document.getElementById(`tab-${target}`);
             if (pane) pane.classList.add('active');
 
-            // If switching to settings and group mode is active, refresh group status
             if (target === 'settings') {
                 const scopeGroup = document.getElementById('scope_group');
                 if (scopeGroup && scopeGroup.checked) {
@@ -150,7 +133,7 @@ function switchTab(tabName) {
 }
 
 
-// ── Help Toggle (Import Section) ──
+// ── Help Toggle ──
 
 function initHelpToggle() {
     const toggle = document.getElementById('helpToggle');
@@ -164,7 +147,7 @@ function initHelpToggle() {
 }
 
 
-// ── Tips Toggle (Settings Section) ──
+// ── Tips Toggle ──
 
 function initTipsToggle() {
     const toggle = document.getElementById('tipsToggle');
@@ -193,7 +176,7 @@ function applyThemeClass(theme) {
 }
 
 
-// ── Cached i18n map (avoid re-fetching) ──
+// ── Cached i18n map ──
 
 let _cachedI18nMap = null;
 let _cachedLang = '';
@@ -210,17 +193,132 @@ async function getI18nMap() {
     }
 }
 
-/**
- * Get a translated string from the cached i18n map.
- * Falls back to chrome.i18n if not found in map.
- */
 function t(key) {
     if (_cachedI18nMap && _cachedI18nMap[key]) return _cachedI18nMap[key];
     try { return chrome.i18n.getMessage(key) || key; } catch { return key; }
 }
 
 
+// ── Protocol Helpers ──
+
+const PROTOCOLS = {
+    http:  { label: 'HTTP',  cls: 'proto-http'  },
+    https: { label: 'HTTPS', cls: 'proto-https' },
+    socks5:{ label: 'SOCKS5',cls: 'proto-socks5'},
+};
+
+function protoLabel(p) {
+    const pr = (p && p.protocol) ? p.protocol : 'http';
+    return (PROTOCOLS[pr] || PROTOCOLS.http).label;
+}
+
+function protoCls(p) {
+    const pr = (p && p.protocol) ? p.protocol : 'http';
+    return (PROTOCOLS[pr] || PROTOCOLS.http).cls;
+}
+
+function createProtoBadge(protocol) {
+    const badge = document.createElement('span');
+    badge.className = 'proto-badge ' + protoCls({protocol});
+    badge.textContent = protoLabel({protocol});
+    return badge;
+}
+
+
+// ── Import Sub-Tabs ──
+
+function initImportTabs() {
+    const importTabBtns = document.querySelectorAll('.import-tab-btn');
+    const importPanes = document.querySelectorAll('.import-pane');
+
+    importTabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.import;
+            importTabBtns.forEach(b => b.classList.remove('active'));
+            importPanes.forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            const pane = document.getElementById(`import-${target}`);
+            if (pane) pane.classList.add('active');
+        });
+    });
+}
+
+
+// ── Add Single Proxy ──
+
+function getSingleFormData() {
+    return {
+        ip: document.getElementById('single_ip').value.trim(),
+        port: document.getElementById('single_port').value.trim(),
+        user: document.getElementById('single_user').value.trim(),
+        pass: document.getElementById('single_pass').value.trim(),
+        protocol: document.getElementById('single_protocol').value || 'http',
+    };
+}
+
+function clearSingleForm() {
+    document.getElementById('single_ip').value = '';
+    document.getElementById('single_port').value = '';
+    document.getElementById('single_user').value = '';
+    document.getElementById('single_pass').value = '';
+    document.getElementById('single_note').value = '';
+    document.getElementById('single_protocol').value = 'http';
+}
+
+function initAddSingleProxy() {
+    const btn = document.querySelector('.add-single-proxy');
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+        const data = getSingleFormData();
+        if (!data.ip || !data.port) return;
+
+        const note = document.getElementById('single_note').value.trim();
+        const newProxy = { ip: data.ip, port: data.port, user: data.user, pass: data.pass, protocol: data.protocol };
+
+        if (note) newProxy.commentAfter = note;
+
+        const { proxy_list = '[]' } = await chrome.runtime.sendMessage({
+            action: 'get_option',
+            key: ['proxy_list'],
+        });
+
+        let list;
+        try { list = JSON.parse(proxy_list); } catch { list = []; }
+
+        list.push(newProxy);
+
+        await chrome.runtime.sendMessage({
+            action: 'save_proxylist',
+            data: list,
+        });
+
+        clearSingleForm();
+        await createTableProxy();
+        switchTab('list');
+    });
+}
+
+
 // ── Proxy List Rendering ──
+
+let currentFilter = 'all';
+let currentSearch = '';
+
+function setFilter(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.proto-filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.filter === filter);
+    });
+    createTableProxy();
+}
+
+function setSearch(query) {
+    currentSearch = query.toLowerCase().trim();
+    const clearBtn = document.getElementById('search_clear');
+    if (clearBtn) clearBtn.classList.toggle('d-none', !currentSearch);
+    createTableProxy();
+}
 
 async function createTableProxy() {
     const { proxy_list = '[]', proxy_current = '' } = await chrome.runtime.sendMessage({
@@ -231,15 +329,18 @@ async function createTableProxy() {
     let list;
     try { list = JSON.parse(proxy_list); } catch { list = []; }
 
+    // Normalize protocols for old entries
+    list = list.map(p => ({...p, protocol: p.protocol || 'http'}));
+
     let current;
     try { current = proxy_current ? JSON.parse(proxy_current) : null; } catch { current = null; }
 
-    // Update import textarea
+    // Update import textarea (bulk tab)
     const importArea = document.querySelector('[name="import_proxy"]');
     if (importArea) {
         importArea.value = list.flatMap(p => [
             ...(p.commentBefore ? [`# ${p.commentBefore}`] : []),
-            `${p.user && p.pass ? `${p.user}:${p.pass}@` : ''}${p.ip}:${p.port}` + (p.commentAfter ? ` # ${p.commentAfter}` : '')
+            `${p.protocol && p.protocol !== 'http' ? p.protocol + ': ' : ''}${p.user && p.pass ? `${p.user}:${p.pass}@` : ''}${p.ip}:${p.port}` + (p.commentAfter ? ` # ${p.commentAfter}` : '')
         ]).join('\n');
     }
 
@@ -252,27 +353,40 @@ async function createTableProxy() {
     const container = document.getElementById('proxy_list_container');
     if (!container) return;
 
-    // Clear existing content
     container.innerHTML = '';
+    container.dir = 'ltr';
 
-    if (!list.length) {
-        // Create empty state — do NOT auto-switch tabs
+    // Filter
+    let filtered = list;
+    if (currentFilter !== 'all') {
+        filtered = filtered.filter(p => (p.protocol || 'http') === currentFilter);
+    }
+    if (currentSearch) {
+        filtered = filtered.filter(p => {
+            const searchStr = `${p.ip}:${p.port} ${p.user || ''} ${p.pass || ''} ${protoLabel(p)} ${p.commentBefore || ''} ${p.commentAfter || ''}`.toLowerCase();
+            return searchStr.includes(currentSearch);
+        });
+    }
+
+    // Update count
+    const countEl = document.getElementById('proxy_count');
+    if (countEl) {
+        const total = list.length;
+        const shown = filtered.length;
+        countEl.textContent = shown === total ? t('TEXT_PROXY_COUNT').replace('{count}', total) : t('TEXT_PROXY_COUNT_FILTERED').replace('{shown}', shown).replace('{total}', total);
+    }
+
+    if (!filtered.length) {
         const emptyDiv = document.createElement('div');
         emptyDiv.className = 'empty-state';
         emptyDiv.innerHTML = `
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="empty-icon">
                 <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/>
             </svg>
-            <p>__MSG_TEXT_EMPTY_LIST__</p>`;
+            <p>${currentSearch ? t('TEXT_NO_SEARCH_RESULTS') : t('TEXT_EMPTY_LIST')}</p>`;
 
-        // Apply i18n ONLY to the new element (not whole page!)
-        const map = await getI18nMap();
-        applyI18nToElement(emptyDiv, map);
-
+        applyI18nToElement(emptyDiv, await getI18nMap());
         container.appendChild(emptyDiv);
-        container.dir = 'ltr';
-        if (document.documentElement.dir === 'rtl') container.classList.add('ltr-force');
-
         return;
     }
 
@@ -280,7 +394,10 @@ async function createTableProxy() {
     listDiv.className = 'proxy-list';
     listDiv.dir = 'ltr';
 
-    list.forEach(p => {
+    filtered.forEach((p, filteredIndex) => {
+        // Find original index in full list for edit/delete
+        const originalIndex = list.findIndex(l => l.ip === p.ip && l.port === p.port && l.user === p.user && l.pass === p.pass && (l.protocol || 'http') === (p.protocol || 'http'));
+
         const isCurrent = current && current.ip === p.ip && current.port === p.port && current.user === p.user && current.pass === p.pass;
         const after = p.commentAfter ?? '';
 
@@ -297,17 +414,16 @@ async function createTableProxy() {
         card.dataset.port = p.port;
         card.dataset.user = p.user || '';
         card.dataset.pass = p.pass || '';
+        card.dataset.protocol = p.protocol || 'http';
+        card.dataset.index = String(originalIndex);
 
-        // Status dot
         const status = document.createElement('div');
         status.className = 'proxy-status';
         card.appendChild(status);
 
-        // Info section
         const info = document.createElement('div');
         info.className = 'proxy-info';
 
-        // Main line: ip:port
         const mainLine = document.createElement('div');
         mainLine.className = 'proxy-main';
 
@@ -323,7 +439,6 @@ async function createTableProxy() {
 
         info.appendChild(mainLine);
 
-        // Meta line: credentials + note
         const metaLine = document.createElement('div');
         metaLine.className = 'proxy-meta';
 
@@ -345,19 +460,49 @@ async function createTableProxy() {
         info.appendChild(metaLine);
         card.appendChild(info);
 
-        // Action button
-        const action = document.createElement('button');
-        action.className = 'proxy-action';
-        action.title = isCurrent ? 'Disable' : 'Connect';
-        if (isCurrent) {
-            action.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
-        } else {
-            action.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-        }
-        card.appendChild(action);
+        // Protocol badge
+        const badge = createProtoBadge(p.protocol);
+        card.appendChild(badge);
 
-        // Click handlers
+        // Action buttons (edit + delete)
+        const actions = document.createElement('div');
+        actions.className = 'proxy-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'proxy-edit-btn';
+        editBtn.title = t('TEXT_EDIT');
+        editBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openEditModal(originalIndex, p);
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'proxy-delete-btn';
+        deleteBtn.title = t('TEXT_DELETE');
+        deleteBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteProxyAction(originalIndex, p);
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+        card.appendChild(actions);
+
+        // Select/deselect action
+        const actionBtn = document.createElement('button');
+        actionBtn.className = 'proxy-action';
+        actionBtn.title = isCurrent ? t('TEXT_DISABLE') : t('TEXT_CONNECT');
+        if (isCurrent) {
+            actionBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
+        } else {
+            actionBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+        }
+        card.appendChild(actionBtn);
+
         card.addEventListener('click', (e) => {
+            if (e.target.closest('.proxy-edit-btn') || e.target.closest('.proxy-delete-btn') || e.target.closest('.proxy-actions')) return;
             if (isCurrent || e.target.closest('.proxy-action')) {
                 disableProxyAction();
             } else {
@@ -369,7 +514,6 @@ async function createTableProxy() {
     });
 
     container.appendChild(listDiv);
-    container.dir = 'ltr';
 }
 
 async function selectProxyAction(card) {
@@ -381,6 +525,7 @@ async function selectProxyAction(card) {
                 port: card.dataset.port,
                 user: card.dataset.user,
                 pass: card.dataset.pass,
+                protocol: card.dataset.protocol || 'http',
             },
         });
 
@@ -392,7 +537,6 @@ async function selectProxyAction(card) {
     }
 
     await createTableProxy();
-    // Refresh group status if in group mode
     const scopeGroup = document.getElementById('scope_group');
     if (scopeGroup && scopeGroup.checked) {
         refreshGroupStatus();
@@ -406,6 +550,117 @@ async function disableProxyAction() {
         console.error('[Mezdia] disableProxyAction error:', e);
     }
     await createTableProxy();
+}
+
+
+// ── Delete Proxy (with Toast) ──
+
+async function deleteProxyAction(index, proxy) {
+    const result = await chrome.runtime.sendMessage({
+        action: 'delete_proxy',
+        index: index,
+    });
+
+    if (result.status !== 'ok') return;
+
+    const label = `${protoLabel(proxy)} ${proxy.ip}:${proxy.port}`;
+
+    let toast = document.getElementById('delete_toast');
+    if (toast) toast.remove();
+
+    toast = document.createElement('div');
+    toast.id = 'delete_toast';
+    toast.className = 'toast';
+    toast.innerHTML = `<span>${t('TEXT_PROXY_DELETED')}: ${label}</span>`;
+
+    const undoBtn = document.createElement('button');
+    undoBtn.className = 'toast-undo';
+    undoBtn.textContent = t('TEXT_UNDO');
+    undoBtn.addEventListener('click', async () => {
+        const { proxy_list = '[]' } = await chrome.runtime.sendMessage({ action: 'get_option', key: ['proxy_list'] });
+        let list;
+        try { list = JSON.parse(proxy_list); } catch { list = []; }
+        list.splice(index, 0, proxy);
+        await chrome.runtime.sendMessage({ action: 'save_proxylist', data: list });
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 200);
+        await createTableProxy();
+    });
+
+    toast.appendChild(undoBtn);
+    document.querySelector('.app').appendChild(toast);
+
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.classList.add('removing');
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 200);
+        }
+    }, 5000);
+
+    await createTableProxy();
+}
+
+
+// ── Edit Modal ──
+
+let editProxyIndex = -1;
+
+function openEditModal(index, proxy) {
+    editProxyIndex = index;
+
+    document.getElementById('edit_protocol').value = proxy.protocol || 'http';
+    document.getElementById('edit_ip').value = proxy.ip || '';
+    document.getElementById('edit_port').value = proxy.port || '';
+    document.getElementById('edit_user').value = proxy.user || '';
+    document.getElementById('edit_pass').value = proxy.pass || '';
+    document.getElementById('edit_note').value = proxy.commentAfter || '';
+
+    const modal = document.getElementById('edit_modal');
+    modal.classList.remove('d-none');
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('edit_modal');
+    modal.classList.add('d-none');
+    editProxyIndex = -1;
+}
+
+function initEditModal() {
+    const modal = document.getElementById('edit_modal');
+    if (!modal) return;
+
+    document.getElementById('modal_close').addEventListener('click', closeEditModal);
+    document.getElementById('modal_cancel').addEventListener('click', closeEditModal);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeEditModal();
+    });
+
+    document.getElementById('modal_save').addEventListener('click', async () => {
+        if (editProxyIndex < 0) return;
+
+        const updated = {
+            ip: document.getElementById('edit_ip').value.trim(),
+            port: document.getElementById('edit_port').value.trim(),
+            user: document.getElementById('edit_user').value.trim(),
+            pass: document.getElementById('edit_pass').value.trim(),
+            protocol: document.getElementById('edit_protocol').value || 'http',
+        };
+
+        const note = document.getElementById('edit_note').value.trim();
+        if (note) updated.commentAfter = note;
+
+        if (!updated.ip || !updated.port) return;
+
+        await chrome.runtime.sendMessage({
+            action: 'update_proxy',
+            index: editProxyIndex,
+            data: updated,
+        });
+
+        closeEditModal();
+        await createTableProxy();
+    });
 }
 
 
@@ -423,7 +678,6 @@ function initProxyScope(stored) {
         scopeAll.checked = true;
     }
 
-    // Show/hide group-specific UI
     toggleGroupUI(scope === 'group');
 
     [scopeAll, scopeGroup].forEach(radio => {
@@ -431,10 +685,6 @@ function initProxyScope(stored) {
             const val = this.value;
             await chrome.runtime.sendMessage({ action: 'set_option', key: 'proxy_scope', val: val });
             toggleGroupUI(val === 'group');
-
-            // If there's an active proxy, re-apply it with the new scope
-            // The service worker handles this in the set_option handler
-            // But we also refresh the UI here
             if (val === 'group') {
                 refreshGroupStatus();
             }
@@ -446,92 +696,68 @@ function toggleGroupUI(isGroup) {
     const statusPanel = document.getElementById('group_status_panel');
     const tipsSection = document.getElementById('group_tips_section');
 
-    if (statusPanel) {
-        statusPanel.classList.toggle('d-none', !isGroup);
-    }
-    if (tipsSection) {
-        tipsSection.classList.toggle('d-none', !isGroup);
-    }
-
-    if (isGroup) {
-        refreshGroupStatus();
-    }
+    if (statusPanel) statusPanel.classList.toggle('d-none', !isGroup);
+    if (tipsSection) tipsSection.classList.toggle('d-none', !isGroup);
+    if (isGroup) refreshGroupStatus();
 }
 
 
-// ── Group Status (FULLY TRANSLATED) ──
+// ── Group Status ──
 
 async function refreshGroupStatus() {
     const statusBody = document.getElementById('group_status_body');
     if (!statusBody) return;
-
-    // Ensure i18n map is loaded
     await getI18nMap();
 
     try {
         const info = await chrome.runtime.sendMessage({ action: 'get_group_status' });
-
         statusBody.innerHTML = '';
 
-        // Group existence row
         const groupRow = document.createElement('div');
         groupRow.className = 'group-status-row';
-
         const groupLabel = document.createElement('span');
         groupLabel.className = 'label';
         groupLabel.textContent = t('TEXT_GRP_LABEL');
-
         const groupValue = document.createElement('span');
         groupValue.className = 'value ' + (info.exists ? 'success' : 'danger');
         groupValue.textContent = info.exists ? t('TEXT_GRP_ACTIVE') : t('TEXT_GRP_NOT_FOUND');
-
         groupRow.appendChild(groupLabel);
         groupRow.appendChild(groupValue);
         statusBody.appendChild(groupRow);
 
-        // Tab count row
         const tabRow = document.createElement('div');
         tabRow.className = 'group-status-row';
-
         const tabLabel = document.createElement('span');
         tabLabel.className = 'label';
         tabLabel.textContent = t('TEXT_GRP_TABS');
-
         const tabValue = document.createElement('span');
         tabValue.className = 'value ' + (info.tabs.length > 0 ? 'success' : 'warning');
         tabValue.textContent = String(info.tabs.length);
-
         tabRow.appendChild(tabLabel);
         tabRow.appendChild(tabValue);
         statusBody.appendChild(tabRow);
 
-        // Domain list
         if (info.domains.length > 0) {
             const domainHeader = document.createElement('div');
             domainHeader.className = 'group-status-row';
-
             const dLabel = document.createElement('span');
             dLabel.className = 'label';
             dLabel.textContent = t('TEXT_GRP_DOMAINS');
-
             const dValue = document.createElement('span');
             dValue.className = 'value';
             dValue.textContent = String(info.domains.length);
-
             domainHeader.appendChild(dLabel);
             domainHeader.appendChild(dValue);
             statusBody.appendChild(domainHeader);
 
             const domainPills = document.createElement('div');
             domainPills.className = 'group-domain-pills';
-
             info.domains.forEach(domain => {
                 const pill = document.createElement('span');
                 pill.className = 'group-domain-item';
                 pill.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>${domain}`;
                 domainPills.appendChild(pill);
             });
-
             statusBody.appendChild(domainPills);
         } else {
             const noDomains = document.createElement('div');
@@ -540,11 +766,8 @@ async function refreshGroupStatus() {
             statusBody.appendChild(noDomains);
         }
 
-        // Show/hide create group button
         const createBtn = document.getElementById('create_group_btn');
-        if (createBtn) {
-            createBtn.classList.toggle('d-none', info.exists);
-        }
+        if (createBtn) createBtn.classList.toggle('d-none', info.exists);
 
     } catch (e) {
         statusBody.innerHTML = `<div class="group-no-domains">${t('TEXT_GRP_ERROR')}</div>`;
@@ -593,22 +816,18 @@ function initCreateGroupBtn() {
 }
 
 
-// ── Exclude URLs Tag-Box Helpers ──
+// ── Exclude URLs Tag-Box ──
 
-// Global state for exclude tags (must be global so helper functions can access it)
 let excludeTags = [];
 
 function addExcludeTags(text) {
     if (!text) return;
-    // Split by comma, newline, or semicolon; trim spaces; filter empty
     const newEntries = text.split(/[,\n;]+/)
         .map(s => s.trim().toLowerCase())
         .filter(s => s.length > 0);
 
-    // Remove protocol prefix if user pasted full URLs (we match by domain)
     const cleaned = newEntries.map(e => {
         try {
-            // If it looks like a URL, extract hostname
             if (e.startsWith('http://') || e.startsWith('https://')) {
                 return new URL(e).hostname;
             }
@@ -616,7 +835,6 @@ function addExcludeTags(text) {
         return e;
     });
 
-    // Add only unique entries
     let changed = false;
     for (const entry of cleaned) {
         if (!excludeTags.includes(entry)) {
@@ -646,7 +864,6 @@ function renderExcludeTags() {
         tagEl.innerHTML = `<span class="tag-text">${tag}</span><button type="button" class="tag-remove" data-index="${index}" title="Remove">&times;</button>`;
         container.appendChild(tagEl);
     });
-    // Attach remove handlers
     container.querySelectorAll('.tag-remove').forEach(btn => {
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -658,7 +875,6 @@ function renderExcludeTags() {
 
 function saveExcludeTags() {
     chrome.runtime.sendMessage({ action: 'set_option', key: 'exclude_urls', val: JSON.stringify(excludeTags) }, () => {
-        // After saving, re-apply the current proxy so the PAC script gets updated
         chrome.runtime.sendMessage({ action: 'reapply_proxy' });
     });
 }
@@ -669,34 +885,21 @@ function saveExcludeTags() {
 document.addEventListener('DOMContentLoaded', async () => {
     const stored = await chrome.runtime.sendMessage({ action: 'get_option' });
 
-    // Apply language (this does the initial full-page i18n, once)
     await applyLanguage(stored.lang || '');
-
-    // Cache the i18n map for dynamic content
     await getI18nMap();
 
-    // Apply theme
     applyThemeClass(stored.theme || '');
 
-    // Initialize tabs (AFTER i18n so DOM is finalized)
     initTabs();
-
-    // Initialize help toggle
+    initImportTabs();
     initHelpToggle();
-
-    // Initialize tips toggle
     initTipsToggle();
-
-    // Initialize proxy scope
     initProxyScope(stored);
-
-    // Initialize create group button
     initCreateGroupBtn();
+    initAddSingleProxy();
+    initEditModal();
 
-    // Proxy list
     await createTableProxy();
-
-    // Apply LTR force after everything is loaded
     applyLtrForce();
 
     // ── Event Listeners ──
@@ -707,7 +910,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         resetBtn.addEventListener('click', disableProxyAction);
     }
 
-    // Save proxy (import)
+    // Save proxy (bulk import)
     const saveBtn = document.querySelector('.saveProxy');
     if (saveBtn) {
         saveBtn.addEventListener('click', async () => {
@@ -721,6 +924,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Search
+    const searchInput = document.getElementById('proxy_search');
+    const searchClear = document.getElementById('search_clear');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => setSearch(searchInput.value));
+    }
+    if (searchClear) {
+        searchClear.addEventListener('click', () => {
+            if (searchInput) searchInput.value = '';
+            setSearch('');
+        });
+    }
+
+    // Protocol filter buttons
+    document.querySelectorAll('.proto-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => setFilter(btn.dataset.filter));
+    });
+
     // Settings checkboxes
     const optionKeys = ['reload_current_tab', 'reload_other_tabs', 'remove_cookies', 'remove_cache'];
     optionKeys.forEach(key => {
@@ -732,7 +953,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // Exclude URLs — Tag Box (populate global excludeTags)
+    // Exclude URLs — Tag Box
     try {
         const raw = stored.exclude_urls || '[]';
         let parsed;
@@ -740,7 +961,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             parsed = JSON.parse(raw);
             if (!Array.isArray(parsed)) parsed = [];
         } catch {
-            // Backward compat: old format was newline-separated string
             parsed = String(raw).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
         }
         excludeTags = parsed;
@@ -753,7 +973,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const excludeInput = document.getElementById('exclude_urls_input');
     const excludeBox = document.getElementById('exclude_urls_box');
 
-    // Click on tag-box should focus the input
     if (excludeBox && excludeInput) {
         excludeBox.addEventListener('click', function (e) {
             if (e.target === excludeBox || e.target.closest('.tag-list')) {
@@ -776,7 +995,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Also handle paste (comma or newline separated)
         excludeInput.addEventListener('paste', function (e) {
             e.preventDefault();
             const paste = (e.clipboardData || window.clipboardData).getData('text');
@@ -785,15 +1003,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Language selector — save and reload popup
+    // Language selector
     const langSelect = document.getElementById('language_select');
     if (langSelect) {
         langSelect.value = stored.lang || '';
         langSelect.addEventListener('change', function () {
             const v = this.value || '';
-            // Save the new language, then reload the popup to apply it
             chrome.runtime.sendMessage({ action: 'set_option', key: 'lang', val: v }, () => {
-                // Reload the popup so it re-initializes with the new language
                 location.reload();
             });
         });
@@ -820,11 +1036,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Save button in settings
+    // Settings save button (visual feedback)
     const settingsSaveBtn = document.querySelector('.settings-save');
     if (settingsSaveBtn) {
         settingsSaveBtn.addEventListener('click', async () => {
-            // Tags are already saved on each change; this button is for visual feedback
             settingsSaveBtn.style.transform = 'scale(0.97)';
             setTimeout(() => { settingsSaveBtn.style.transform = ''; }, 150);
         });
@@ -833,6 +1048,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Show body
     document.body.style.display = '';
 });
-
-
-

@@ -55,12 +55,33 @@
     <div class="tab-content">
         <!-- Proxy List Tab -->
         <div class="tab-pane active" id="tab-list">
-            <button type="button" class="btn btn-danger resetProxy d-none" id="resetProxy">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-                </svg>
-                <span>__MSG_TEXT_BTN_DISABLE_PROXY__</span>
-            </button>
+            <div class="list-toolbar">
+                <button type="button" class="btn btn-danger resetProxy d-none" id="resetProxy">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                    </svg>
+                    <span>__MSG_TEXT_BTN_DISABLE_PROXY__</span>
+                </button>
+                <div class="search-box ltr-force" id="search_box">
+                    <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input type="text" id="proxy_search" dir="ltr" class="search-input ltr-force" placeholder="__MSG_TEXT_SEARCH_PROXY__">
+                    <button type="button" class="search-clear d-none" id="search_clear">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="proto-filter">
+                    <button type="button" class="proto-filter-btn active" data-filter="all">__MSG_TEXT_FILTER_ALL__</button>
+                    <button type="button" class="proto-filter-btn" data-filter="http">HTTP</button>
+                    <button type="button" class="proto-filter-btn" data-filter="https">HTTPS</button>
+                    <button type="button" class="proto-filter-btn" data-filter="socks5">SOCKS5</button>
+                </div>
+            </div>
+
+            <div class="proxy-list-count" id="proxy_count"></div>
 
             <div class="proxy-list ltr-force" id="proxy_list_container">
                 <div class="empty-state">
@@ -75,37 +96,110 @@
         <!-- Import Tab -->
         <div class="tab-pane" id="tab-import">
             <div class="import-section">
-                <button type="button" class="help-toggle" id="helpToggle">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    <span>__MSG_TEXT_EXAMPLE__</span>
-                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                </button>
-                <div class="help-content ltr-force" id="helpContent">
-                    <textarea readonly rows="6" dir="ltr">ip:port
-ip:port:login:password
-login:password@ip:port
-# comment 1
-login:password@ip:port # comment 2
-
-Excluded URLs — Tag Input:
-Type a domain (e.g. Mezdia.ir) and press Enter.
-Separate multiple with comma: Mezdia.ir, z.ai
-Spaces are ignored. Click × to remove a tag.</textarea>
+                <div class="import-tabs">
+                    <button type="button" class="import-tab-btn active" data-import="single">__MSG_TEXT_ADD_SINGLE__</button>
+                    <button type="button" class="import-tab-btn" data-import="bulk">__MSG_TEXT_IMPORT_BULK__</button>
                 </div>
 
-                <label class="field-label" for="import_proxy">__MSG_TEXT_PROXY_LIST__</label>
-                <textarea id="import_proxy" name="import_proxy" rows="10" placeholder="ip:port:login:password" dir="ltr" class="ltr-force"></textarea>
+                <div class="import-pane active" id="import-single">
+                    <div class="field-group">
+                        <label class="field-label" for="single_protocol">__MSG_TEXT_PROTOCOL__</label>
+                        <div class="select-wrap">
+                            <select id="single_protocol">
+                                <option value="http">HTTP</option>
+                                <option value="https">HTTPS</option>
+                                <option value="socks5">SOCKS5</option>
+                            </select>
+                            <svg class="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-group field-flex">
+                            <label class="field-label" for="single_ip">__MSG_TEXT_COL_IP__</label>
+                            <input type="text" id="single_ip" dir="ltr" class="ltr-force" placeholder="127.0.0.1">
+                        </div>
+                        <div class="field-group field-small">
+                            <label class="field-label" for="single_port">__MSG_TEXT_COL_PORT__</label>
+                            <input type="text" id="single_port" dir="ltr" class="ltr-force" placeholder="1080">
+                        </div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-group field-flex">
+                            <label class="field-label" for="single_user">__MSG_TEXT_COL_LOGIN__</label>
+                            <input type="text" id="single_user" dir="ltr" class="ltr-force" placeholder="__MSG_TEXT_OPTIONAL__">
+                        </div>
+                        <div class="field-group field-flex">
+                            <label class="field-label" for="single_pass">__MSG_TEXT_COL_PASSWORD__</label>
+                            <input type="password" id="single_pass" dir="ltr" class="ltr-force" placeholder="__MSG_TEXT_OPTIONAL__">
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="single_note">__MSG_TEXT_COL_NOTE__</label>
+                        <input type="text" id="single_note" dir="ltr" class="ltr-force" placeholder="__MSG_TEXT_OPTIONAL__">
+                    </div>
+                    <button type="button" class="btn btn-primary add-single-proxy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        <span>__MSG_TEXT_ADD_PROXY__</span>
+                    </button>
+                </div>
 
-                <button type="button" class="btn btn-primary saveProxy">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-                    </svg>
-                    <span>__MSG_TEXT_BTN_SAVE__</span>
-                </button>
+                <div class="import-pane" id="import-bulk">
+                    <button type="button" class="help-toggle" id="helpToggle">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        <span>__MSG_TEXT_EXAMPLE__</span>
+                        <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <div class="help-content ltr-force" id="helpContent">
+                        <div class="help-grid">
+                            <div class="help-card">
+                                <div class="help-card-header">
+                                    <span class="proto-badge proto-http">HTTP</span>
+                                    <span class="help-card-title">__MSG_TEXT_HTTP_FORMAT__</span>
+                                </div>
+                                <textarea readonly rows="4" dir="ltr">ip:port
+ip:port:login:password
+login:password@ip:port</textarea>
+                            </div>
+                            <div class="help-card">
+                                <div class="help-card-header">
+                                    <span class="proto-badge proto-https">HTTPS</span>
+                                    <span class="help-card-title">__MSG_TEXT_HTTPS_FORMAT__</span>
+                                </div>
+                                <textarea readonly rows="4" dir="ltr">https: ip:port
+https: ip:port:login:password
+https: login:password@ip:port</textarea>
+                            </div>
+                            <div class="help-card">
+                                <div class="help-card-header">
+                                    <span class="proto-badge proto-socks5">SOCKS5</span>
+                                    <span class="help-card-title">__MSG_TEXT_SOCKS5_FORMAT__</span>
+                                </div>
+                                <textarea readonly rows="4" dir="ltr">socks5: ip:port
+socks5: ip:port:login:password
+socks5: login:password@ip:port</textarea>
+                            </div>
+                        </div>
+                        <p class="help-footer">__MSG_TEXT_HELP_FOOTER__</p>
+                    </div>
+
+                    <label class="field-label" for="import_proxy">__MSG_TEXT_PROXY_LIST__</label>
+                    <textarea id="import_proxy" name="import_proxy" rows="8" placeholder="ip:port:login:password" dir="ltr" class="ltr-force"></textarea>
+
+                    <button type="button" class="btn btn-primary saveProxy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                        <span>__MSG_TEXT_BTN_SAVE__</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -283,6 +377,63 @@ Spaces are ignored. Click × to remove a tag.</textarea>
                     </svg>
                     <span>__MSG_TEXT_BTN_SAVE__</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Proxy Modal -->
+    <div class="modal-overlay d-none" id="edit_modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>__MSG_TEXT_EDIT_PROXY__</h3>
+                <button type="button" class="modal-close" id="modal_close">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="field-group">
+                    <label class="field-label" for="edit_protocol">__MSG_TEXT_PROTOCOL__</label>
+                    <div class="select-wrap">
+                        <select id="edit_protocol">
+                            <option value="http">HTTP</option>
+                            <option value="https">HTTPS</option>
+                            <option value="socks5">SOCKS5</option>
+                        </select>
+                        <svg class="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field-group field-flex">
+                        <label class="field-label" for="edit_ip">__MSG_TEXT_COL_IP__</label>
+                        <input type="text" id="edit_ip" dir="ltr" class="ltr-force">
+                    </div>
+                    <div class="field-group field-small">
+                        <label class="field-label" for="edit_port">__MSG_TEXT_COL_PORT__</label>
+                        <input type="text" id="edit_port" dir="ltr" class="ltr-force">
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field-group field-flex">
+                        <label class="field-label" for="edit_user">__MSG_TEXT_COL_LOGIN__</label>
+                        <input type="text" id="edit_user" dir="ltr" class="ltr-force">
+                    </div>
+                    <div class="field-group field-flex">
+                        <label class="field-label" for="edit_pass">__MSG_TEXT_COL_PASSWORD__</label>
+                        <input type="password" id="edit_pass" dir="ltr" class="ltr-force">
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label class="field-label" for="edit_note">__MSG_TEXT_COL_NOTE__</label>
+                    <input type="text" id="edit_note" dir="ltr" class="ltr-force">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="modal_cancel">__MSG_TEXT_CANCEL__</button>
+                <button type="button" class="btn btn-primary" id="modal_save">__MSG_TEXT_BTN_SAVE__</button>
             </div>
         </div>
     </div>

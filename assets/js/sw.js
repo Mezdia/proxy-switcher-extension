@@ -1,8 +1,10 @@
 /* ═══════════════════════════════════════════════════
-   Mezdia Proxy Switcher — Service Worker v3.12.1
+   Mezdia Proxy Switcher — Service Worker v4.0.0
    ═══════════════════════════════════════════════════ */
 
 const DEFAULT_GROUP_NAME = 'Mezdia';
+
+const SUPPORTED_PROTOCOLS = ['http', 'https', 'socks5'];
 
 const defaults = {
     proxy_current: '',
@@ -85,6 +87,15 @@ async function runSideEffects(forceReloadGroupTabs = false) {
 }
 
 
+function normalizeProtocol(proto) {
+    if (!proto) return 'http';
+    const lower = proto.toLowerCase().replace(/[\s\-]/g, '');
+    if (lower === 'socks5' || lower === 'socksv5') return 'socks5';
+    if (lower === 'https' || lower === 'ssl') return 'https';
+    if (lower === 'http') return 'http';
+    return 'http';
+}
+
 function parseProxyList(raw) {
     const escape = {'&': '&amp;', '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;'};
     let pendingComment = '';
@@ -104,13 +115,22 @@ function parseProxyList(raw) {
         const text = idx === -1 ? line : line.slice(0, idx).trim();
         const inlineComment = idx === -1 ? '' : line.slice(idx + 1).trim().replace(/[&"'<>]/g, c => (escape)[c]);
 
+        let protocol = 'http';
+        let proxyText = text;
+
+        const protocolMatch = text.match(/^((?:socks5|https?|ssl|socksv5)\s*:)/i);
+        if (protocolMatch) {
+            protocol = normalizeProtocol(protocolMatch[1].replace(/:$/, '').trim());
+            proxyText = text.slice(protocolMatch[0].length).trim();
+        }
+
         let ip, port, user = '', pass = '';
-        if (text.includes('@')) {
-            const [auth, host] = text.split('@');
+        if (proxyText.includes('@')) {
+            const [auth, host] = proxyText.split('@');
             [user, pass] = auth.split(':');
             [ip, port] = host.split(':');
         } else {
-            [ip, port, user = '', pass = ''] = text.split(':');
+            [ip, port, user = '', pass = ''] = proxyText.split(':');
         }
 
         if (!ip || !port || ((!!user) ^ (!!pass))) {
@@ -118,7 +138,7 @@ function parseProxyList(raw) {
             return out;
         }
 
-        out.push({ip, port, user, pass, commentBefore: pendingComment, commentAfter: inlineComment});
+        out.push({ip, port, user, pass, protocol, commentBefore: pendingComment, commentAfter: inlineComment});
 
         pendingComment = '';
         return out;
@@ -209,13 +229,20 @@ function classifyExcludeEntries(entries) {
     return { domains, patterns };
 }
 
-function buildGroupPacScript(proxyHost, proxyPort, domains, excludeEntries) {
+function pacProxyDirective(proxyHost, proxyPort, protocol) {
+    if (protocol === 'socks5') return `SOCKS5 ${proxyHost}:${proxyPort}; SOCKS ${proxyHost}:${proxyPort}`;
+    if (protocol === 'https') return `HTTPS ${proxyHost}:${proxyPort}`;
+    return `PROXY ${proxyHost}:${proxyPort}`;
+}
+
+function buildGroupPacScript(proxyHost, proxyPort, protocol, domains, excludeEntries) {
     let safeDomains = (domains || []).filter(d => d && typeof d === 'string');
     const { domains: excludeDomains, patterns: excludePatterns } = classifyExcludeEntries(excludeEntries);
 
     const jsonDomains = JSON.stringify(safeDomains);
     const jsonExDomains = JSON.stringify(excludeDomains);
     const jsonExPatterns = JSON.stringify(excludePatterns);
+    const directive = pacProxyDirective(proxyHost, proxyPort, protocol);
 
     return `function FindProxyForURL(url, host) {
   var proxiedDomains = ${jsonDomains};
@@ -241,7 +268,7 @@ function buildGroupPacScript(proxyHost, proxyPort, domains, excludeEntries) {
 
   for (j = 0; j < proxiedDomains.length; j++) {
     if (host === proxiedDomains[j] || dnsDomainIs(host, "." + proxiedDomains[j])) {
-      return "PROXY ${proxyHost}:${proxyPort}";
+      return "${directive}";
     }
   }
 
@@ -250,10 +277,11 @@ function buildGroupPacScript(proxyHost, proxyPort, domains, excludeEntries) {
 }
 
 
-function buildAllTabsPacScript(proxyHost, proxyPort, excludeEntries) {
+function buildAllTabsPacScript(proxyHost, proxyPort, protocol, excludeEntries) {
     const { domains: excludeDomains, patterns: excludePatterns } = classifyExcludeEntries(excludeEntries);
     const jsonExDomains = JSON.stringify(excludeDomains);
     const jsonExPatterns = JSON.stringify(excludePatterns);
+    const directive = pacProxyDirective(proxyHost, proxyPort, protocol);
     return `function FindProxyForURL(url, host) {
   var excludeDomains = ${jsonExDomains};
   var excludePatterns = ${jsonExPatterns};
@@ -271,12 +299,12 @@ function buildAllTabsPacScript(proxyHost, proxyPort, excludeEntries) {
     }
   }
 
-  return "PROXY ${proxyHost}:${proxyPort}";
+  return "${directive}";
 }`;
 }
 
 
-async function applyProxy({ip, port, user = '', pass = ''}, withSideFx = true) {
+async function applyProxy({ip, port, user = '', pass = '', protocol = 'http'}, withSideFx = true) {
     const {exclude_urls = '[]', proxy_scope = 'all'} = await chrome.storage.local.get(['exclude_urls', 'proxy_scope']);
     let entries;
     try {
@@ -288,12 +316,13 @@ async function applyProxy({ip, port, user = '', pass = ''}, withSideFx = true) {
 
     let pacData;
     const proxyHost = ip, proxyPort = Number(port);
+    const normalizedProtocol = normalizeProtocol(protocol);
 
     if (proxy_scope === 'group') {
         const domains = await getMezdiaGroupDomains();
-        pacData = buildGroupPacScript(proxyHost, proxyPort, domains, entries);
+        pacData = buildGroupPacScript(proxyHost, proxyPort, normalizedProtocol, domains, entries);
     } else {
-        pacData = buildAllTabsPacScript(proxyHost, proxyPort, entries);
+        pacData = buildAllTabsPacScript(proxyHost, proxyPort, normalizedProtocol, entries);
     }
 
     const config = {mode: 'pac_script', pacScript: {data: pacData}};
@@ -302,7 +331,7 @@ async function applyProxy({ip, port, user = '', pass = ''}, withSideFx = true) {
 
     proxyEnabled = true;
     proxyAuth = user && pass ? {user, pass} : null;
-    await chrome.storage.local.set({proxy_current: JSON.stringify({ip, port, user, pass})});
+    await chrome.storage.local.set({proxy_current: JSON.stringify({ip, port, user, pass, protocol: normalizedProtocol})});
     updateIcon();
 
     if (withSideFx) {
@@ -337,6 +366,7 @@ async function restoreProxy() {
         const {proxy_current = ''} = await chrome.storage.local.get('proxy_current');
         const p = readJSON(proxy_current);
         if (p && p.ip && p.port) {
+            if (!p.protocol) p.protocol = 'http';
             await applyProxy(p, false);
         } else {
             proxyEnabled = false;
@@ -470,6 +500,88 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
                 status: 'ok',
                 saved: list.length
             }));
+            return true;
+        }
+
+        case 'save_proxylist': {
+            const listData = req.data;
+            if (!Array.isArray(listData)) {
+                sendResponse({status: 'error', message: 'Invalid list data'});
+                return true;
+            }
+            chrome.storage.local.set({proxy_list: JSON.stringify(listData)}).then(() => sendResponse({
+                status: 'ok',
+                saved: listData.length
+            }));
+            return true;
+        }
+
+        case 'delete_proxy': {
+            (async () => {
+                try {
+                    const {proxy_list = '[]', proxy_current = ''} = await chrome.storage.local.get(['proxy_list', 'proxy_current']);
+                    let list;
+                    try { list = JSON.parse(proxy_list); } catch { list = []; }
+                    let current;
+                    try { current = proxy_current ? JSON.parse(proxy_current) : null; } catch { current = null; }
+
+                    const index = req.index;
+                    if (index < 0 || index >= list.length) {
+                        sendResponse({status: 'error', message: 'Invalid index'});
+                        return;
+                    }
+
+                    const deleted = list[index];
+
+                    if (current && current.ip === deleted.ip && current.port === deleted.port && current.user === deleted.user && current.pass === deleted.pass) {
+                        disableProxy();
+                    }
+
+                    list.splice(index, 1);
+                    await chrome.storage.local.set({proxy_list: JSON.stringify(list)});
+                    sendResponse({status: 'ok'});
+                } catch (e) {
+                    sendResponse({status: 'error', message: e.message});
+                }
+            })();
+            return true;
+        }
+
+        case 'update_proxy': {
+            (async () => {
+                try {
+                    const {proxy_list = '[]', proxy_current = ''} = await chrome.storage.local.get(['proxy_list', 'proxy_current']);
+                    let list;
+                    try { list = JSON.parse(proxy_list); } catch { list = []; }
+                    let current;
+                    try { current = proxy_current ? JSON.parse(proxy_current) : null; } catch { current = null; }
+
+                    const index = req.index;
+                    const updated = req.data;
+
+                    if (index < 0 || index >= list.length || !updated || !updated.ip || !updated.port) {
+                        sendResponse({status: 'error', message: 'Invalid index or data'});
+                        return;
+                    }
+
+                    if (!updated.protocol) updated.protocol = 'http';
+                    updated.protocol = normalizeProtocol(updated.protocol);
+
+                    const wasCurrent = current && current.ip === list[index].ip && current.port === list[index].port && current.user === list[index].user && current.pass === list[index].pass;
+
+                    list[index] = updated;
+
+                    await chrome.storage.local.set({proxy_list: JSON.stringify(list)});
+
+                    if (wasCurrent) {
+                        await applyProxy(updated, true);
+                    }
+
+                    sendResponse({status: 'ok'});
+                } catch (e) {
+                    sendResponse({status: 'error', message: e.message});
+                }
+            })();
             return true;
         }
 

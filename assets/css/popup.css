@@ -1212,3 +1212,569 @@ textarea::placeholder {
     .tab-btn { padding: 8px 12px; }
     .tab-btn svg { width: 18px; height: 18px; }
 }
+
+/* ═══════════════════════════════════════════════════
+   Protocol Badges
+   ═══════════════════════════════════════════════════ */
+
+.proto-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: var(--radius-full);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.proto-badge.proto-http {
+    background: rgba(74, 222, 128, 0.12);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.proto-badge.proto-https {
+    background: rgba(129, 140, 248, 0.12);
+    color: #818cf8;
+    border: 1px solid rgba(129, 140, 248, 0.2);
+}
+
+.proto-badge.proto-socks5 {
+    background: rgba(251, 146, 60, 0.12);
+    color: #fb923c;
+    border: 1px solid rgba(251, 146, 60, 0.2);
+}
+
+.light .proto-badge.proto-http {
+    background: rgba(34, 197, 94, 0.08);
+    color: #16a34a;
+    border-color: rgba(34, 197, 94, 0.15);
+}
+
+.light .proto-badge.proto-https {
+    background: rgba(99, 102, 241, 0.08);
+    color: #4f46e5;
+    border-color: rgba(99, 102, 241, 0.15);
+}
+
+.light .proto-badge.proto-socks5 {
+    background: rgba(249, 115, 22, 0.08);
+    color: #ea580c;
+    border-color: rgba(249, 115, 22, 0.15);
+}
+
+/* ═══════════════════════════════════════════════════
+   List Toolbar (Search + Filter)
+   ═══════════════════════════════════════════════════ */
+
+.list-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    transition: all var(--transition);
+}
+
+.search-box:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-dim);
+}
+
+.search-icon {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    opacity: 0.5;
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    outline: none;
+    padding: 2px 0;
+}
+
+.search-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-full);
+    border: none;
+    background: var(--bg-hover);
+    color: var(--text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    transition: all var(--transition);
+}
+
+.search-clear:hover {
+    background: var(--danger-dim);
+    color: var(--danger);
+}
+
+.proto-filter {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.proto-filter-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    background: var(--bg-surface);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+
+.proto-filter-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+    border-color: var(--border);
+}
+
+.proto-filter-btn.active {
+    background: var(--primary-dim);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.proxy-list-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 4px 2px;
+}
+
+/* ═══════════════════════════════════════════════════
+   Proxy Card — Protocol Badge + Actions
+   ═══════════════════════════════════════════════════ */
+
+.proxy-card .proto-badge {
+    margin-left: auto;
+    margin-right: 4px;
+}
+
+.proxy-card .proxy-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+
+.proxy-card:hover .proxy-actions {
+    opacity: 1;
+}
+
+.proxy-actions .proxy-edit-btn,
+.proxy-actions .proxy-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition);
+    padding: 0;
+}
+
+.proxy-edit-btn:hover {
+    background: var(--primary-dim);
+    color: var(--primary);
+}
+
+.proxy-delete-btn:hover {
+    background: var(--danger-dim);
+    color: var(--danger);
+}
+
+/* ═══════════════════════════════════════════════════
+   Import Tab — Sub-tabs & Single Add Form
+   ═══════════════════════════════════════════════════ */
+
+.import-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 2px;
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+}
+
+.import-tab-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+
+.import-tab-btn:hover {
+    color: var(--text-secondary);
+}
+
+.import-tab-btn.active {
+    background: var(--bg-elevated);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+}
+
+.import-pane {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.import-pane.active {
+    display: flex;
+    animation: fadeIn 0.2s ease;
+}
+
+.field-row {
+    display: flex;
+    gap: 8px;
+}
+
+.field-flex {
+    flex: 1;
+    min-width: 0;
+}
+
+.field-small {
+    width: 90px;
+    flex-shrink: 0;
+}
+
+.import-pane .field-group {
+    gap: 4px;
+}
+
+.import-pane .field-label {
+    font-size: 10.5px;
+}
+
+.import-pane input[type="text"],
+.import-pane input[type="password"] {
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    outline: none;
+    transition: all var(--transition);
+    -webkit-appearance: none;
+}
+
+.import-pane input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-dim);
+}
+
+.import-pane input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════════
+   Help Section — Improved with Protocol Cards
+   ═══════════════════════════════════════════════════ */
+
+.help-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.help-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.help-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.help-card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.help-card textarea {
+    width: 100%;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+    padding: 10px 12px;
+    resize: none;
+    overflow: hidden;
+}
+
+.help-footer {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    padding: 4px 2px;
+    margin: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   Modal — Edit Proxy
+   ═══════════════════════════════════════════════════ */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.15s ease;
+}
+
+.modal-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: calc(100% - 32px);
+    max-width: 360px;
+    box-shadow: var(--shadow-md), 0 24px 48px rgba(0,0,0,0.5);
+    animation: modalSlideIn 0.2s ease;
+}
+
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: translateY(-12px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.modal-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.modal-close:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+}
+
+.modal-body .field-group {
+    gap: 4px;
+}
+
+.modal-body .field-label {
+    font-size: 10.5px;
+}
+
+.modal-body input[type="text"],
+.modal-body input[type="password"] {
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    outline: none;
+    transition: all var(--transition);
+    -webkit-appearance: none;
+}
+
+.modal-body input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-dim);
+}
+
+.modal-footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px 14px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.modal-footer .btn {
+    flex: 1;
+}
+
+.btn-secondary {
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+    border-color: var(--text-muted);
+}
+
+/* ═══════════════════════════════════════════════════
+   Delete Confirmation Toast
+   ═══════════════════════════════════════════════════ */
+
+.toast {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    z-index: 1001;
+    animation: toastIn 0.25s ease;
+}
+
+.toast.removing {
+    animation: toastOut 0.2s ease forwards;
+}
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes toastOut {
+    from { opacity: 1; transform: translateX(-50%) translateY(0); }
+    to { opacity: 0; transform: translateX(-50%) translateY(12px); }
+}
+
+.toast .toast-undo {
+    border: none;
+    background: var(--primary-dim);
+    color: var(--primary);
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+
+.toast .toast-undo:hover {
+    background: var(--primary);
+    color: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════
+   RTL — Additional Overrides
+   ═══════════════════════════════════════════════════ */
+
+[dir="rtl"] .proxy-card .proto-badge {
+    margin-left: 4px;
+    margin-right: auto;
+}
+
+[dir="rtl"] .modal-close {
+    right: auto;
+    left: 16px;
+}
+
+[dir="rtl"] .search-box .search-icon {
+    order: 1;
+}
+
+[dir="rtl"] .modal-footer {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .import-tab-btn {
+    text-align: right;
+}
+
+[dir="rtl"] .toast {
+    flex-direction: row-reverse;
+}
