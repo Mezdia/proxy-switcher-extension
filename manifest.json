@@ -10,8 +10,7 @@
     "storage",
     "webRequest",
     "webRequestAuthProvider",
-    "tabGroups",
-    "alarms"
+    "tabGroups"
   ],
   "host_permissions": [
     "<all_urls>"
