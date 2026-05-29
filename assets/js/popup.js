@@ -1023,7 +1023,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const isLight = html.classList.contains('light');
             const newTheme = isLight ? '' : 'light';
             await chrome.runtime.sendMessage({ action: 'set_option', key: 'theme', val: newTheme });
-            applyThemeClass(newTheme);
+
+            ThemeTransition.transition(() => {
+                applyThemeClass(newTheme);
+            });
         });
     }
 
