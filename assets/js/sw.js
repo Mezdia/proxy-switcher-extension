@@ -13,7 +13,7 @@ const defaults = {
     reload_other_tabs: false,
     remove_cookies: false,
     remove_cache: false,
-    lang: '',
+    lang: 'en',
     exclude_urls: '[]',
     proxy_scope: 'all',
 };
@@ -449,9 +449,7 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
 
             const defSubset = keys.reduce((o, k) => (o[k] = defaults[k], o), {});
             chrome.storage.local.get(defSubset).then(stored => {
-                const out = keys.length === 1
-                    ? stored[keys[0]]
-                    : keys.reduce((o, k) => (o[k] = stored[k], o), {});
+                const out = keys.reduce((o, k) => (o[k] = stored[k], o), {});
                 sendResponse(out);
             }).catch(e => {
                 console.error('[Mezdia] get_option error:', e);
@@ -630,7 +628,7 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
                         tabs: [],
                         domains: [],
                         proxyEnabled: false,
-                        lang: '',
+    lang: 'en',
                         scope: 'all',
                     });
                 }
