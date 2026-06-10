@@ -13,7 +13,7 @@ const defaults = {
     reload_other_tabs: false,
     remove_cookies: false,
     remove_cache: false,
-    lang: '',
+    lang: 'en',
     exclude_urls: '[]',
     proxy_scope: 'all',
 };
@@ -630,7 +630,7 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
                         tabs: [],
                         domains: [],
                         proxyEnabled: false,
-                        lang: '',
+    lang: 'en',
                         scope: 'all',
                     });
                 }

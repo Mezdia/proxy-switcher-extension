@@ -58,13 +58,8 @@ async function applyLanguage(lang) {
         html.dir = 'ltr';
         html.lang = lang;
     } else {
-        const browserLang = navigator.language || 'en';
-        if (browserLang.startsWith('fa') || browserLang.startsWith('ar')) {
-            html.dir = 'rtl';
-        } else {
-            html.dir = 'ltr';
-        }
-        html.lang = browserLang;
+        html.dir = 'ltr';
+        html.lang = 'en';
     }
 
     const map = await loadLocaleMap(lang);
@@ -186,7 +181,7 @@ async function getI18nMap() {
     try {
         const { lang } = await chrome.runtime.sendMessage({ action: 'get_option', key: ['lang'] });
         _cachedLang = lang || '';
-        _cachedI18nMap = await loadLocaleMap(_cachedLang || navigator.language || 'en');
+        _cachedI18nMap = await loadLocaleMap(_cachedLang || 'en');
         return _cachedI18nMap;
     } catch {
         return null;

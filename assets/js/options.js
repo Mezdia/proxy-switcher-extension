@@ -44,13 +44,8 @@ async function applyLanguage(lang) {
         html.dir = 'ltr';
         html.lang = lang;
     } else {
-        const browserLang = navigator.language || 'en';
-        if (browserLang.startsWith('fa') || browserLang.startsWith('ar')) {
-            html.dir = 'rtl';
-        } else {
-            html.dir = 'ltr';
-        }
-        html.lang = browserLang;
+        html.dir = 'ltr';
+        html.lang = 'en';
     }
 
     const map = await loadLocaleMap(lang);
