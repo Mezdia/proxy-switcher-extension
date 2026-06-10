@@ -449,9 +449,7 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
 
             const defSubset = keys.reduce((o, k) => (o[k] = defaults[k], o), {});
             chrome.storage.local.get(defSubset).then(stored => {
-                const out = keys.length === 1
-                    ? stored[keys[0]]
-                    : keys.reduce((o, k) => (o[k] = stored[k], o), {});
+                const out = keys.reduce((o, k) => (o[k] = stored[k], o), {});
                 sendResponse(out);
             }).catch(e => {
                 console.error('[Mezdia] get_option error:', e);
