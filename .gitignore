@@ -1,2 +1,6 @@
 .idea/
 *.zip
+
+# opencode config
+opencode.json
+
