@@ -23,30 +23,28 @@ function getMessage(map, key) {
     try { return chrome.i18n.getMessage(key) || ''; } catch { return ''; }
 }
 
+const MSG_PREFIX = '__MSG_';
+
+// Placeholders live in text nodes and in attributes such as placeholder/title.
+// Replacing them in place keeps the existing DOM, whereas rewriting
+// documentElement.innerHTML re-parses the whole document and relinks stylesheets.
 function applyI18n(map) {
-    const html = document.documentElement;
-    html.innerHTML = html.innerHTML.replace(/__MSG_(\w+)__/g, (_, key) => {
-        return getMessage(map, key);
-    });
+    const translate = str => str.replace(/__MSG_(\w+)__/g, (_, key) => getMessage(map, key));
+    const walker = document.createTreeWalker(
+        document.documentElement,
+        NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
+    );
 
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.dataset.i18n;
-        const msg = getMessage(map, key);
-        if (!msg) return;
-        if (el instanceof HTMLInputElement) {
-            if (el.placeholder) el.placeholder = msg;
-            else if (el.value) el.value = msg;
-        } else {
-            el.innerHTML = msg;
+    let node;
+    while ((node = walker.nextNode())) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            for (const attr of node.attributes) {
+                if (attr.value.includes(MSG_PREFIX)) attr.value = translate(attr.value);
+            }
+        } else if (node.nodeValue.includes(MSG_PREFIX)) {
+            node.nodeValue = translate(node.nodeValue);
         }
-    });
-}
-
-function applyI18nToElement(el, map) {
-    if (!el) return;
-    el.innerHTML = el.innerHTML.replace(/__MSG_(\w+)__/g, (_, key) => {
-        return getMessage(map, key);
-    });
+    }
 }
 
 async function applyLanguage(lang) {
@@ -299,23 +297,57 @@ function initAddSingleProxy() {
 
 let currentFilter = 'all';
 let currentSearch = '';
+let proxyListCache = [];
+let currentProxy = null;
+let _searchTimer = null;
+
+const SEARCH_DEBOUNCE_MS = 120;
+
+const ICON = {
+    lock: `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+    edit: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+    del: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+    off: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`,
+    check: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+    globe: `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>`,
+    empty: `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="empty-icon">
+                <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/>
+            </svg>`,
+};
+
+// Lists saved before the escape was removed hold HTML entities; rendering uses
+// textContent, so the entities would show literally.
+function unescapeLegacy(str) {
+    if (!str) return '';
+    return String(str).replace(/&(amp|lt|gt|quot|#39|apos);/g, (_, e) => (
+        e === 'amp' ? '&' : e === 'lt' ? '<' : e === 'gt' ? '>' : e === 'quot' ? '"' : "'"
+    ));
+}
 
 function setFilter(filter) {
     currentFilter = filter;
     document.querySelectorAll('.proto-filter-btn').forEach(b => {
         b.classList.toggle('active', b.dataset.filter === filter);
     });
-    createTableProxy();
+    renderProxyList();
 }
 
 function setSearch(query) {
     currentSearch = query.toLowerCase().trim();
     const clearBtn = document.getElementById('search_clear');
     if (clearBtn) clearBtn.classList.toggle('d-none', !currentSearch);
-    createTableProxy();
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(renderProxyList, SEARCH_DEBOUNCE_MS);
 }
 
-async function createTableProxy() {
+function proxyToImportLine(p) {
+    const proto = p.protocol && p.protocol !== 'http' ? `${p.protocol}: ` : '';
+    const creds = p.user && p.pass ? `${p.user}:${p.pass}@` : '';
+    const body = `${proto}${creds}${p.ip}:${p.port}${p.commentAfter ? ` # ${p.commentAfter}` : ''}`;
+    return p.commentBefore ? `# ${p.commentBefore}\n${body}` : body;
+}
+
+async function loadProxyData() {
     const { proxy_list = '[]', proxy_current = '' } = await chrome.runtime.sendMessage({
         action: 'get_option',
         key: ['proxy_list', 'proxy_current'],
@@ -323,64 +355,70 @@ async function createTableProxy() {
 
     let list;
     try { list = JSON.parse(proxy_list); } catch { list = []; }
+    if (!Array.isArray(list)) list = [];
 
-    // Normalize protocols for old entries
-    list = list.map(p => ({...p, protocol: p.protocol || 'http'}));
+    proxyListCache = list.map(p => ({
+        ...p,
+        protocol: p.protocol || 'http',
+        commentBefore: unescapeLegacy(p.commentBefore),
+        commentAfter: unescapeLegacy(p.commentAfter),
+    }));
 
-    let current;
-    try { current = proxy_current ? JSON.parse(proxy_current) : null; } catch { current = null; }
+    try { currentProxy = proxy_current ? JSON.parse(proxy_current) : null; } catch { currentProxy = null; }
 
-    // Update import textarea (bulk tab)
     const importArea = document.querySelector('[name="import_proxy"]');
-    if (importArea) {
-        importArea.value = list.flatMap(p => [
-            ...(p.commentBefore ? [`# ${p.commentBefore}`] : []),
-            `${p.protocol && p.protocol !== 'http' ? p.protocol + ': ' : ''}${p.user && p.pass ? `${p.user}:${p.pass}@` : ''}${p.ip}:${p.port}` + (p.commentAfter ? ` # ${p.commentAfter}` : '')
-        ]).join('\n');
-    }
+    if (importArea) importArea.value = proxyListCache.map(proxyToImportLine).join('\n');
 
-    // Show/hide disable button
     const resetBtn = document.querySelector('button.resetProxy');
-    if (resetBtn) {
-        resetBtn.classList.toggle('d-none', !current);
-    }
+    if (resetBtn) resetBtn.classList.toggle('d-none', !currentProxy);
+}
 
+async function createTableProxy() {
+    await loadProxyData();
+    renderProxyList();
+}
+
+function matchesSearch(p, query) {
+    return `${p.ip}:${p.port} ${p.user || ''} ${p.pass || ''} ${protoLabel(p)} ${p.commentBefore || ''} ${p.commentAfter || ''}`
+        .toLowerCase()
+        .includes(query);
+}
+
+function renderProxyList() {
     const container = document.getElementById('proxy_list_container');
     if (!container) return;
 
-    container.innerHTML = '';
+    container.textContent = '';
     container.dir = 'ltr';
 
-    // Filter
-    let filtered = list;
-    if (currentFilter !== 'all') {
-        filtered = filtered.filter(p => (p.protocol || 'http') === currentFilter);
-    }
-    if (currentSearch) {
-        filtered = filtered.filter(p => {
-            const searchStr = `${p.ip}:${p.port} ${p.user || ''} ${p.pass || ''} ${protoLabel(p)} ${p.commentBefore || ''} ${p.commentAfter || ''}`.toLowerCase();
-            return searchStr.includes(currentSearch);
-        });
+    const list = proxyListCache;
+    const visible = [];
+    for (let i = 0; i < list.length; i++) {
+        const p = list[i];
+        if (currentFilter !== 'all' && (p.protocol || 'http') !== currentFilter) continue;
+        if (currentSearch && !matchesSearch(p, currentSearch)) continue;
+        visible.push({ p, index: i });
     }
 
     // Update count
     const countEl = document.getElementById('proxy_count');
     if (countEl) {
         const total = list.length;
-        const shown = filtered.length;
-        countEl.textContent = shown === total ? t('TEXT_PROXY_COUNT').replace('{count}', total) : t('TEXT_PROXY_COUNT_FILTERED').replace('{shown}', shown).replace('{total}', total);
+        const shown = visible.length;
+        countEl.textContent = shown === total
+            ? t('TEXT_PROXY_COUNT').replace('{count}', total)
+            : t('TEXT_PROXY_COUNT_FILTERED').replace('{shown}', shown).replace('{total}', total);
     }
 
-    if (!filtered.length) {
+    if (!visible.length) {
         const emptyDiv = document.createElement('div');
         emptyDiv.className = 'empty-state';
-        emptyDiv.innerHTML = `
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="empty-icon">
-                <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/>
-            </svg>
-            <p>${currentSearch ? t('TEXT_NO_SEARCH_RESULTS') : t('TEXT_EMPTY_LIST')}</p>`;
+        emptyDiv.innerHTML = ICON.empty;
 
-        applyI18nToElement(emptyDiv, await getI18nMap());
+        const emptyText = document.createElement('p');
+        emptyText.textContent = currentSearch ? t('TEXT_NO_SEARCH_RESULTS') : t('TEXT_EMPTY_LIST');
+        emptyDiv.appendChild(emptyText);
+
         container.appendChild(emptyDiv);
         return;
     }
@@ -389,12 +427,11 @@ async function createTableProxy() {
     listDiv.className = 'proxy-list';
     listDiv.dir = 'ltr';
 
-    filtered.forEach((p, filteredIndex) => {
-        // Find original index in full list for edit/delete
-        const originalIndex = list.findIndex(l => l.ip === p.ip && l.port === p.port && l.user === p.user && l.pass === p.pass && (l.protocol || 'http') === (p.protocol || 'http'));
-
-        const isCurrent = current && current.ip === p.ip && current.port === p.port && current.user === p.user && current.pass === p.pass;
-        const after = p.commentAfter ?? '';
+    for (const {p, index: originalIndex} of visible) {
+        const isCurrent = !!currentProxy
+            && currentProxy.ip === p.ip && currentProxy.port === p.port
+            && currentProxy.user === p.user && currentProxy.pass === p.pass;
+        const after = p.commentAfter;
 
         if (p.commentBefore) {
             const commentDiv = document.createElement('div');
@@ -405,11 +442,6 @@ async function createTableProxy() {
 
         const card = document.createElement('div');
         card.className = `proxy-card${isCurrent ? ' current' : ''}`;
-        card.dataset.ip = p.ip;
-        card.dataset.port = p.port;
-        card.dataset.user = p.user || '';
-        card.dataset.pass = p.pass || '';
-        card.dataset.protocol = p.protocol || 'http';
         card.dataset.index = String(originalIndex);
 
         const status = document.createElement('div');
@@ -440,7 +472,8 @@ async function createTableProxy() {
         if (p.user) {
             const creds = document.createElement('span');
             creds.className = 'proxy-credentials';
-            creds.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> ${p.user}`;
+            creds.innerHTML = ICON.lock;
+            creds.append(' ' + p.user);
             metaLine.appendChild(creds);
         }
 
@@ -466,7 +499,7 @@ async function createTableProxy() {
         const editBtn = document.createElement('button');
         editBtn.className = 'proxy-edit-btn';
         editBtn.title = t('TEXT_EDIT');
-        editBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+        editBtn.innerHTML = ICON.edit;
         editBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             openEditModal(originalIndex, p);
@@ -475,7 +508,7 @@ async function createTableProxy() {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'proxy-delete-btn';
         deleteBtn.title = t('TEXT_DELETE');
-        deleteBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+        deleteBtn.innerHTML = ICON.del;
         deleteBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             deleteProxyAction(originalIndex, p);
@@ -489,38 +522,34 @@ async function createTableProxy() {
         const actionBtn = document.createElement('button');
         actionBtn.className = 'proxy-action';
         actionBtn.title = isCurrent ? t('TEXT_DISABLE') : t('TEXT_CONNECT');
-        if (isCurrent) {
-            actionBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
-        } else {
-            actionBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-        }
+        actionBtn.innerHTML = isCurrent ? ICON.off : ICON.check;
         card.appendChild(actionBtn);
 
         card.addEventListener('click', (e) => {
-            if (e.target.closest('.proxy-edit-btn') || e.target.closest('.proxy-delete-btn') || e.target.closest('.proxy-actions')) return;
+            if (e.target.closest('.proxy-actions')) return;
             if (isCurrent || e.target.closest('.proxy-action')) {
                 disableProxyAction();
             } else {
-                selectProxyAction(card);
+                selectProxyAction(p);
             }
         });
 
         listDiv.appendChild(card);
-    });
+    }
 
     container.appendChild(listDiv);
 }
 
-async function selectProxyAction(card) {
+async function selectProxyAction(p) {
     try {
         const result = await chrome.runtime.sendMessage({
             action: 'set_proxy',
             data: {
-                ip: card.dataset.ip,
-                port: card.dataset.port,
-                user: card.dataset.user,
-                pass: card.dataset.pass,
-                protocol: card.dataset.protocol || 'http',
+                ip: p.ip,
+                port: p.port,
+                user: p.user || '',
+                pass: p.pass || '',
+                protocol: p.protocol || 'http',
             },
         });
 
@@ -566,7 +595,10 @@ async function deleteProxyAction(index, proxy) {
     toast = document.createElement('div');
     toast.id = 'delete_toast';
     toast.className = 'toast';
-    toast.innerHTML = `<span>${t('TEXT_PROXY_DELETED')}: ${label}</span>`;
+
+    const toastText = document.createElement('span');
+    toastText.textContent = `${t('TEXT_PROXY_DELETED')}: ${label}`;
+    toast.appendChild(toastText);
 
     const undoBtn = document.createElement('button');
     undoBtn.className = 'toast-undo';
@@ -679,10 +711,8 @@ function initProxyScope(stored) {
         radio.addEventListener('change', async function () {
             const val = this.value;
             await chrome.runtime.sendMessage({ action: 'set_option', key: 'proxy_scope', val: val });
+            // toggleGroupUI refreshes the group status itself when entering group mode
             toggleGroupUI(val === 'group');
-            if (val === 'group') {
-                refreshGroupStatus();
-            }
         });
     });
 }
@@ -699,6 +729,22 @@ function toggleGroupUI(isGroup) {
 
 // ── Group Status ──
 
+function statusRow(label, value, valueClass) {
+    const row = document.createElement('div');
+    row.className = 'group-status-row';
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'label';
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement('span');
+    valueEl.className = valueClass ? `value ${valueClass}` : 'value';
+    valueEl.textContent = value;
+
+    row.append(labelEl, valueEl);
+    return row;
+}
+
 async function refreshGroupStatus() {
     const statusBody = document.getElementById('group_status_body');
     if (!statusBody) return;
@@ -706,53 +752,31 @@ async function refreshGroupStatus() {
 
     try {
         const info = await chrome.runtime.sendMessage({ action: 'get_group_status' });
-        statusBody.innerHTML = '';
+        statusBody.textContent = '';
 
-        const groupRow = document.createElement('div');
-        groupRow.className = 'group-status-row';
-        const groupLabel = document.createElement('span');
-        groupLabel.className = 'label';
-        groupLabel.textContent = t('TEXT_GRP_LABEL');
-        const groupValue = document.createElement('span');
-        groupValue.className = 'value ' + (info.exists ? 'success' : 'danger');
-        groupValue.textContent = info.exists ? t('TEXT_GRP_ACTIVE') : t('TEXT_GRP_NOT_FOUND');
-        groupRow.appendChild(groupLabel);
-        groupRow.appendChild(groupValue);
-        statusBody.appendChild(groupRow);
-
-        const tabRow = document.createElement('div');
-        tabRow.className = 'group-status-row';
-        const tabLabel = document.createElement('span');
-        tabLabel.className = 'label';
-        tabLabel.textContent = t('TEXT_GRP_TABS');
-        const tabValue = document.createElement('span');
-        tabValue.className = 'value ' + (info.tabs.length > 0 ? 'success' : 'warning');
-        tabValue.textContent = String(info.tabs.length);
-        tabRow.appendChild(tabLabel);
-        tabRow.appendChild(tabValue);
-        statusBody.appendChild(tabRow);
+        statusBody.appendChild(statusRow(
+            t('TEXT_GRP_LABEL'),
+            info.exists ? t('TEXT_GRP_ACTIVE') : t('TEXT_GRP_NOT_FOUND'),
+            info.exists ? 'success' : 'danger'
+        ));
+        statusBody.appendChild(statusRow(
+            t('TEXT_GRP_TABS'),
+            String(info.tabs.length),
+            info.tabs.length > 0 ? 'success' : 'warning'
+        ));
 
         if (info.domains.length > 0) {
-            const domainHeader = document.createElement('div');
-            domainHeader.className = 'group-status-row';
-            const dLabel = document.createElement('span');
-            dLabel.className = 'label';
-            dLabel.textContent = t('TEXT_GRP_DOMAINS');
-            const dValue = document.createElement('span');
-            dValue.className = 'value';
-            dValue.textContent = String(info.domains.length);
-            domainHeader.appendChild(dLabel);
-            domainHeader.appendChild(dValue);
-            statusBody.appendChild(domainHeader);
+            statusBody.appendChild(statusRow(t('TEXT_GRP_DOMAINS'), String(info.domains.length)));
 
             const domainPills = document.createElement('div');
             domainPills.className = 'group-domain-pills';
-            info.domains.forEach(domain => {
+            for (const domain of info.domains) {
                 const pill = document.createElement('span');
                 pill.className = 'group-domain-item';
-                pill.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>${domain}`;
+                pill.innerHTML = ICON.globe;
+                pill.append(domain);
                 domainPills.appendChild(pill);
-            });
+            }
             statusBody.appendChild(domainPills);
         } else {
             const noDomains = document.createElement('div');
@@ -765,7 +789,11 @@ async function refreshGroupStatus() {
         if (createBtn) createBtn.classList.toggle('d-none', info.exists);
 
     } catch (e) {
-        statusBody.innerHTML = `<div class="group-no-domains">${t('TEXT_GRP_ERROR')}</div>`;
+        const err = document.createElement('div');
+        err.className = 'group-no-domains';
+        err.textContent = t('TEXT_GRP_ERROR');
+        statusBody.textContent = '';
+        statusBody.appendChild(err);
     }
 }
 
@@ -819,23 +847,21 @@ function addExcludeTags(text) {
     if (!text) return;
     const newEntries = text.split(/[,\n;]+/)
         .map(s => s.trim().toLowerCase())
-        .filter(s => s.length > 0);
-
-    const cleaned = newEntries.map(e => {
-        try {
+        .filter(s => s.length > 0)
+        .map(e => {
             if (e.startsWith('http://') || e.startsWith('https://')) {
-                return new URL(e).hostname;
+                try { return new URL(e).hostname; } catch {}
             }
-        } catch {}
-        return e;
-    });
+            return e;
+        });
 
+    const seen = new Set(excludeTags);
     let changed = false;
-    for (const entry of cleaned) {
-        if (!excludeTags.includes(entry)) {
-            excludeTags.push(entry);
-            changed = true;
-        }
+    for (const entry of newEntries) {
+        if (seen.has(entry)) continue;
+        seen.add(entry);
+        excludeTags.push(entry);
+        changed = true;
     }
     if (changed) {
         renderExcludeTags();
@@ -852,26 +878,34 @@ function removeExcludeTag(index) {
 function renderExcludeTags() {
     const container = document.getElementById('exclude_urls_tags');
     if (!container) return;
-    container.innerHTML = '';
+    container.textContent = '';
+
     excludeTags.forEach((tag, index) => {
         const tagEl = document.createElement('span');
         tagEl.className = 'tag-item';
-        tagEl.innerHTML = `<span class="tag-text">${tag}</span><button type="button" class="tag-remove" data-index="${index}" title="Remove">&times;</button>`;
-        container.appendChild(tagEl);
-    });
-    container.querySelectorAll('.tag-remove').forEach(btn => {
-        btn.addEventListener('click', function (e) {
+
+        const text = document.createElement('span');
+        text.className = 'tag-text';
+        text.textContent = tag;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'tag-remove';
+        removeBtn.title = 'Remove';
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', e => {
             e.stopPropagation();
-            const idx = parseInt(this.dataset.index);
-            removeExcludeTag(idx);
+            removeExcludeTag(index);
         });
+
+        tagEl.append(text, removeBtn);
+        container.appendChild(tagEl);
     });
 }
 
+// sw.js re-applies the PAC script when exclude_urls changes, so no extra message here.
 function saveExcludeTags() {
-    chrome.runtime.sendMessage({ action: 'set_option', key: 'exclude_urls', val: JSON.stringify(excludeTags) }, () => {
-        chrome.runtime.sendMessage({ action: 'reapply_proxy' });
-    });
+    chrome.runtime.sendMessage({ action: 'set_option', key: 'exclude_urls', val: JSON.stringify(excludeTags) });
 }
 
 

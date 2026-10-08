@@ -15,24 +15,31 @@ async function loadLocaleMap(lang) {
     }
 }
 
+const MSG_PREFIX = '__MSG_';
+
+// chrome.i18n covers the "auto" language case, where no locale map is loaded.
+function getMessage(map, key) {
+    if (map && map[key]) return map[key];
+    try { return chrome.i18n.getMessage(key) || ''; } catch { return ''; }
+}
+
 function applyI18n(map) {
-    const html = document.documentElement;
-    html.innerHTML = html.innerHTML.replace(/__MSG_(\w+)__/g, (_, key) => {
-        return (map && map[key]) || '';
-    });
+    const translate = str => str.replace(/__MSG_(\w+)__/g, (_, key) => getMessage(map, key));
+    const walker = document.createTreeWalker(
+        document.documentElement,
+        NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
+    );
 
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.dataset.i18n;
-        const msg = (map && map[key]) || '';
-        if (!msg) return;
-
-        if (el instanceof HTMLInputElement) {
-            if (el.placeholder) el.placeholder = msg;
-            else if (el.value) el.value = msg;
-        } else {
-            el.textContent = msg;
+    let node;
+    while ((node = walker.nextNode())) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            for (const attr of node.attributes) {
+                if (attr.value.includes(MSG_PREFIX)) attr.value = translate(attr.value);
+            }
+        } else if (node.nodeValue.includes(MSG_PREFIX)) {
+            node.nodeValue = translate(node.nodeValue);
         }
-    });
+    }
 }
 
 async function applyLanguage(lang) {

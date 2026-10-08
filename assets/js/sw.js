@@ -13,6 +13,7 @@ const defaults = {
     reload_other_tabs: false,
     remove_cookies: false,
     remove_cache: false,
+    theme: '',
     lang: 'en',
     exclude_urls: '[]',
     proxy_scope: 'all',
@@ -36,7 +37,7 @@ const readJSON = str => {
 };
 
 
-async function runSideEffects(forceReloadGroupTabs = false) {
+async function runSideEffects(groupTabIds = null) {
     const {
         reload_current_tab,
         reload_other_tabs,
@@ -52,25 +53,16 @@ async function runSideEffects(forceReloadGroupTabs = false) {
     const shouldReloadCurrent = reload_current_tab;
     const shouldReloadOther = reload_other_tabs;
 
-    if (shouldReloadCurrent || shouldReloadOther || forceReloadGroupTabs) {
+    if (shouldReloadCurrent || shouldReloadOther || groupTabIds) {
         try {
-            let groupTabIds = [];
-            if (forceReloadGroupTabs) {
-                const info = await getMezdiaGroupInfo();
-                groupTabIds = info.tabs.map(t => t.id);
-            }
-
-            const wins = await chrome.windows.getAll({populate: true});
-            for (const w of wins) {
-                for (const t of w.tabs) {
-                    const isGroupTab = groupTabIds.includes(t.id);
-                    if (shouldReloadCurrent && t.active) {
-                        chrome.tabs.reload(t.id, {bypassCache: true});
-                    } else if (shouldReloadOther && !t.active) {
-                        chrome.tabs.reload(t.id, {bypassCache: true});
-                    } else if (forceReloadGroupTabs && isGroupTab && !shouldReloadCurrent && !shouldReloadOther) {
-                        chrome.tabs.reload(t.id, {bypassCache: true});
-                    }
+            const tabs = await chrome.tabs.query({});
+            for (const t of tabs) {
+                if (shouldReloadCurrent && t.active) {
+                    chrome.tabs.reload(t.id, {bypassCache: true});
+                } else if (shouldReloadOther && !t.active) {
+                    chrome.tabs.reload(t.id, {bypassCache: true});
+                } else if (groupTabIds && groupTabIds.has(t.id) && !shouldReloadCurrent && !shouldReloadOther) {
+                    chrome.tabs.reload(t.id, {bypassCache: true});
                 }
             }
         } catch (e) {
@@ -97,7 +89,6 @@ function normalizeProtocol(proto) {
 }
 
 function parseProxyList(raw) {
-    const escape = {'&': '&amp;', '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;'};
     let pendingComment = '';
 
     return raw.split(/\r?\n/).reduce((out, rawLine) => {
@@ -107,13 +98,13 @@ function parseProxyList(raw) {
             return out;
         }
         if (line.startsWith('#')) {
-            pendingComment = line.slice(1).trim().replace(/[&"'<>]/g, c => (escape)[c]);
+            pendingComment = line.slice(1).trim();
             return out;
         }
 
         const idx = line.indexOf('#');
         const text = idx === -1 ? line : line.slice(0, idx).trim();
-        const inlineComment = idx === -1 ? '' : line.slice(idx + 1).trim().replace(/[&"'<>]/g, c => (escape)[c]);
+        const inlineComment = idx === -1 ? '' : line.slice(idx + 1).trim();
 
         let protocol = 'http';
         let proxyText = text;
@@ -174,12 +165,12 @@ async function getMezdiaGroupInfo() {
         result.exists = true;
         result.groupColor = groups[0].color || null;
 
-        const groupIds = groups.map(g => g.id);
+        const groupIds = new Set(groups.map(g => g.id));
         const allTabs = await chrome.tabs.query({});
 
         const domainSet = new Set();
         for (const tab of allTabs) {
-            if (tab.groupId !== undefined && tab.groupId !== -1 && groupIds.includes(tab.groupId)) {
+            if (tab.groupId !== undefined && tab.groupId !== -1 && groupIds.has(tab.groupId)) {
                 let domain = '';
                 try {
                     const url = new URL(tab.url);
@@ -204,12 +195,6 @@ async function getMezdiaGroupInfo() {
     }
 
     return result;
-}
-
-
-async function getMezdiaGroupDomains() {
-    const info = await getMezdiaGroupInfo();
-    return info.domains;
 }
 
 
@@ -315,12 +300,14 @@ async function applyProxy({ip, port, user = '', pass = '', protocol = 'http'}, w
     }
 
     let pacData;
+    let groupTabIds = null;
     const proxyHost = ip, proxyPort = Number(port);
     const normalizedProtocol = normalizeProtocol(protocol);
 
     if (proxy_scope === 'group') {
-        const domains = await getMezdiaGroupDomains();
-        pacData = buildGroupPacScript(proxyHost, proxyPort, normalizedProtocol, domains, entries);
+        const info = await getMezdiaGroupInfo();
+        groupTabIds = new Set(info.tabs.map(t => t.id));
+        pacData = buildGroupPacScript(proxyHost, proxyPort, normalizedProtocol, info.domains, entries);
     } else {
         pacData = buildAllTabsPacScript(proxyHost, proxyPort, normalizedProtocol, entries);
     }
@@ -335,11 +322,7 @@ async function applyProxy({ip, port, user = '', pass = '', protocol = 'http'}, w
     updateIcon();
 
     if (withSideFx) {
-        if (proxy_scope === 'group') {
-            await runSideEffects(true);
-        } else {
-            await runSideEffects(false);
-        }
+        await runSideEffects(groupTabIds);
     }
 }
 
@@ -354,7 +337,7 @@ function disableProxy() {
     proxyAuth = null;
     chrome.storage.local.set({proxy_current: ''});
     updateIcon();
-    runSideEffects(false);
+    runSideEffects();
 }
 
 
@@ -383,6 +366,8 @@ async function restoreProxy() {
 
 
 async function refreshGroupProxy() {
+    if (!proxyEnabled) return;
+
     if (_refreshTimer) {
         clearTimeout(_refreshTimer);
     }
@@ -393,11 +378,8 @@ async function refreshGroupProxy() {
         if (!proxyEnabled) return;
 
         try {
-            const {proxy_scope = 'all'} = await chrome.storage.local.get('proxy_scope');
-            if (proxy_scope !== 'group') return;
-
-            const {proxy_current = ''} = await chrome.storage.local.get('proxy_current');
-            if (!proxy_current) return;
+            const {proxy_scope = 'all', proxy_current = ''} = await chrome.storage.local.get(['proxy_scope', 'proxy_current']);
+            if (proxy_scope !== 'group' || !proxy_current) return;
 
             const p = JSON.parse(proxy_current);
             await applyProxy(p, false);
