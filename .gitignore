@@ -4,3 +4,5 @@
 # opencode config
 opencode.json
 
+# HyperFrames promo project and its renders — kept locally, not published
+videos/
