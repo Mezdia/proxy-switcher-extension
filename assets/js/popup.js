@@ -788,6 +788,13 @@ async function refreshGroupStatus() {
         const createBtn = document.getElementById('create_group_btn');
         if (createBtn) createBtn.classList.toggle('d-none', info.exists);
 
+        if (!chrome.tabGroups) {
+            const note = document.createElement('div');
+            note.className = 'group-no-domains';
+            note.textContent = t('TEXT_GRP_UNTITLED_NOTE');
+            statusBody.appendChild(note);
+        }
+
     } catch (e) {
         const err = document.createElement('div');
         err.className = 'group-no-domains';

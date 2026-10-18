@@ -6,6 +6,15 @@ const DEFAULT_GROUP_NAME = 'Mezdia';
 
 const SUPPORTED_PROTOCOLS = ['http', 'https', 'socks5'];
 
+/* Blink applies an inline PAC script; Gecko cannot store one and instead asks
+   the extension for a proxy per request through proxy.onRequest. */
+const GECKO_PROXY = typeof browser !== 'undefined' && typeof browser.proxy?.onRequest?.addListener === 'function';
+
+/* Gecko can group tabs by id but has no tabGroups API, so a group cannot be
+   titled and its id has to be remembered instead of looked up by name. */
+const SUPPORTS_TAB_GROUPS = !!chrome.tabGroups && typeof chrome.tabs.group === 'function';
+const SUPPORTS_TAB_GROUPING = typeof chrome.tabs.group === 'function';
+
 const defaults = {
     proxy_current: '',
     proxy_list: '',
@@ -198,6 +207,68 @@ async function getMezdiaGroupInfo() {
 }
 
 
+/* Gecko mirror of getMezdiaGroupInfo: the Mezdia group is identified by the
+   tab id it was created with, because no group title can be stored. */
+async function getGeckoGroupInfo() {
+    const result = {exists: false, groupColor: null, tabs: [], domains: []};
+    const {mezdia_group_id = null} = await chrome.storage.local.get('mezdia_group_id');
+    if (!mezdia_group_id) return result;
+
+    try {
+        const allTabs = await chrome.tabs.query({});
+        const domainSet = new Set();
+
+        for (const tab of allTabs) {
+            if (tab.groupId !== mezdia_group_id) continue;
+
+            let domain = '';
+            try {
+                const url = new URL(tab.url);
+                domain = url.hostname;
+                if (domain && !domain.startsWith('chrome') && domain !== 'newtab' && domain !== 'extensions') {
+                    domainSet.add(domain);
+                }
+            } catch { /* skip invalid URLs */ }
+
+            result.tabs.push({
+                id: tab.id,
+                url: tab.url || '',
+                title: tab.title || '',
+                domain: domain,
+            });
+        }
+
+        result.exists = result.tabs.length > 0;
+        result.domains = [...domainSet].sort();
+    } catch (e) {
+        console.warn('[Mezdia] getGeckoGroupInfo error:', e);
+    }
+
+    return result;
+}
+
+
+async function getGroupInfo() {
+    return SUPPORTS_TAB_GROUPS ? getMezdiaGroupInfo() : getGeckoGroupInfo();
+}
+
+
+/* Gecko cannot name a group, so the group created here is remembered by id. */
+async function geckoJoinGroup(tabId) {
+    const {mezdia_group_id = null} = await chrome.storage.local.get('mezdia_group_id');
+    const tabs = await chrome.tabs.query({});
+
+    if (mezdia_group_id && tabs.some(t => t.groupId === mezdia_group_id)) {
+        await chrome.tabs.group({groupId: mezdia_group_id, tabIds: [tabId]});
+        return mezdia_group_id;
+    }
+
+    const groupId = await chrome.tabs.group({tabIds: [tabId]});
+    await chrome.storage.local.set({mezdia_group_id: groupId});
+    return groupId;
+}
+
+
 function classifyExcludeEntries(entries) {
     const domains = [];
     const patterns = [];
@@ -289,6 +360,83 @@ function buildAllTabsPacScript(proxyHost, proxyPort, protocol, excludeEntries) {
 }
 
 
+/* ── Gecko proxy engine ──
+   proxy.onRequest is the stand-in for the PAC script: returning null drops the
+   proxy for that request (PAC "DIRECT"), an object applies it, and undefined
+   leaves whatever the browser itself configured in charge. */
+
+const SH_EXP_SPECIALS = /[.+^${}()|[\]\\]/g;
+
+let geckoPolicy = null;
+let geckoListenerInstalled = false;
+
+function toShellRegExp(pattern) {
+    return new RegExp(`^${pattern.replace(SH_EXP_SPECIALS, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.')}$`);
+}
+
+function hostInDomain(host, domain) {
+    return host === domain || host.endsWith(`.${domain}`);
+}
+
+/* Only SOCKS carries credentials in the ProxyInfo itself; an HTTP proxy's
+   Proxy-Authorization header is ignored here, so that auth keeps flowing through
+   webRequest.onAuthRequired, which both engines honour. */
+function geckoProxyInfo({ip, port, protocol, user, pass}) {
+    const type = protocol === 'socks5' ? 'socks' : protocol;
+    const info = {type, host: ip, port};
+
+    if (type === 'socks') {
+        info.proxyDNS = true;
+        if (user && pass) {
+            info.username = user;
+            info.password = pass;
+        }
+    }
+
+    return info;
+}
+
+function installGeckoPolicy({proxyInfo, domains = [], patterns = [], allowDomains = null}) {
+    geckoPolicy = {proxyInfo, domains, patterns: patterns.map(toShellRegExp), allowDomains};
+
+    if (geckoListenerInstalled) return;
+    chrome.proxy.onRequest.addListener(geckoOnRequest, {urls: ['<all_urls>']});
+    geckoListenerInstalled = true;
+}
+
+function geckoOnRequest(details) {
+    const policy = geckoPolicy;
+    if (!policy) return undefined;
+
+    let host;
+    try {
+        host = new URL(details.url).hostname;
+    } catch {
+        return undefined;
+    }
+
+    for (const pattern of policy.patterns) {
+        if (pattern.test(details.url) || pattern.test(host)) return null;
+    }
+    for (const domain of policy.domains) {
+        if (hostInDomain(host, domain)) return null;
+    }
+    if (policy.allowDomains !== null && !policy.allowDomains.some(d => hostInDomain(host, d))) {
+        return null;
+    }
+
+    return {...policy.proxyInfo};
+}
+
+function clearGeckoPolicy() {
+    geckoPolicy = null;
+    if (!geckoListenerInstalled) return;
+
+    chrome.proxy.onRequest.removeListener(geckoOnRequest);
+    geckoListenerInstalled = false;
+}
+
+
 async function applyProxy({ip, port, user = '', pass = '', protocol = 'http'}, withSideFx = true) {
     const {exclude_urls = '[]', proxy_scope = 'all'} = await chrome.storage.local.get(['exclude_urls', 'proxy_scope']);
     let entries;
@@ -299,22 +447,31 @@ async function applyProxy({ip, port, user = '', pass = '', protocol = 'http'}, w
         entries = String(exclude_urls).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     }
 
-    let pacData;
     let groupTabIds = null;
+    let allowDomains = null;
     const proxyHost = ip, proxyPort = Number(port);
     const normalizedProtocol = normalizeProtocol(protocol);
 
-    if (proxy_scope === 'group') {
-        const info = await getMezdiaGroupInfo();
+    if (proxy_scope === 'group' && SUPPORTS_TAB_GROUPING) {
+        const info = await getGroupInfo();
         groupTabIds = new Set(info.tabs.map(t => t.id));
-        pacData = buildGroupPacScript(proxyHost, proxyPort, normalizedProtocol, info.domains, entries);
-    } else {
-        pacData = buildAllTabsPacScript(proxyHost, proxyPort, normalizedProtocol, entries);
+        allowDomains = info.domains;
+    } else if (proxy_scope === 'group') {
+        console.warn('[Mezdia] tab groups are unavailable in this browser, proxying all tabs instead');
     }
 
-    const config = {mode: 'pac_script', pacScript: {data: pacData}};
-
-    await chrome.proxy.settings.set({value: config, scope: 'regular'});
+    if (GECKO_PROXY) {
+        installGeckoPolicy({
+            proxyInfo: geckoProxyInfo({ip: proxyHost, port: proxyPort, protocol: normalizedProtocol, user, pass}),
+            ...classifyExcludeEntries(entries),
+            allowDomains,
+        });
+    } else {
+        const pacData = allowDomains === null
+            ? buildAllTabsPacScript(proxyHost, proxyPort, normalizedProtocol, entries)
+            : buildGroupPacScript(proxyHost, proxyPort, normalizedProtocol, allowDomains, entries);
+        await chrome.proxy.settings.set({value: {mode: 'pac_script', pacScript: {data: pacData}}, scope: 'regular'});
+    }
 
     proxyEnabled = true;
     proxyAuth = user && pass ? {user, pass} : null;
@@ -329,7 +486,11 @@ async function applyProxy({ip, port, user = '', pass = '', protocol = 'http'}, w
 
 function disableProxy() {
     try {
-        chrome.proxy.settings.clear({scope: 'regular'});
+        if (GECKO_PROXY) {
+            clearGeckoPolicy();
+        } else {
+            chrome.proxy.settings.clear({scope: 'regular'});
+        }
     } catch (e) {
         console.warn('[Mezdia] disableProxy clear error:', e);
     }
@@ -594,8 +755,9 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
         case 'get_group_status': {
             (async () => {
                 try {
-                    const info = await getMezdiaGroupInfo();
+                    const info = await getGroupInfo();
                     info.proxyEnabled = proxyEnabled;
+                    info.groupable = SUPPORTS_TAB_GROUPING;
 
                     const {lang = '', proxy_scope = 'all'} = await chrome.storage.local.get(['lang', 'proxy_scope']);
                     info.lang = lang;
@@ -610,8 +772,9 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
                         tabs: [],
                         domains: [],
                         proxyEnabled: false,
-    lang: 'en',
+                        lang: 'en',
                         scope: 'all',
+                        groupable: SUPPORTS_TAB_GROUPING,
                     });
                 }
             })();
@@ -620,10 +783,26 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
 
         case 'create_mezdia_group': {
             (async () => {
+                if (!SUPPORTS_TAB_GROUPING) {
+                    sendResponse({status: 'error', message: 'Tab groups are not supported by this browser'});
+                    return;
+                }
+
                 try {
-                    const [activeTab] = await chrome.tabs.query({active: true, currentWindow: true});
+                    const query = SUPPORTS_TAB_GROUPS ? {active: true, currentWindow: true} : {active: true, lastFocusedWindow: true};
+                    const [activeTab] = await chrome.tabs.query(query);
                     if (!activeTab) {
                         sendResponse({status: 'error', message: 'No active tab found'});
+                        return;
+                    }
+
+                    if (!SUPPORTS_TAB_GROUPS) {
+                        sendResponse({
+                            status: 'ok',
+                            message: 'Mezdia group created',
+                            groupId: await geckoJoinGroup(activeTab.id),
+                        });
+                        refreshGroupProxy();
                         return;
                     }
 
@@ -653,10 +832,22 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
 
         case 'add_tab_to_group': {
             (async () => {
+                if (!SUPPORTS_TAB_GROUPING) {
+                    sendResponse({status: 'error', message: 'Tab groups are not supported by this browser'});
+                    return;
+                }
+
                 try {
                     const tabId = req.tabId;
                     if (!tabId) {
                         sendResponse({status: 'error', message: 'No tab ID provided'});
+                        return;
+                    }
+
+                    if (!SUPPORTS_TAB_GROUPS) {
+                        const groupId = await geckoJoinGroup(tabId);
+                        refreshGroupProxy();
+                        sendResponse({status: 'ok', groupId: groupId});
                         return;
                     }
 

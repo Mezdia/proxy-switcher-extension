@@ -82,5 +82,6 @@
   "TEXT_GRP_DOMAINS": { "message": "Домены через прокси" },
   "TEXT_GRP_NO_DOMAINS": { "message": "Домены пока не обнаружены" },
   "TEXT_GRP_CREATED": { "message": "✓ Создана!" },
-  "TEXT_GRP_ERROR": { "message": "✗ Ошибка" }
+  "TEXT_GRP_ERROR": { "message": "✗ Ошибка" },
+  "TEXT_GRP_UNTITLED_NOTE": { "message": "Этот браузер не позволяет назвать группу вкладок, поэтому прокси применяется к группе, созданной этой кнопкой." }
 }
