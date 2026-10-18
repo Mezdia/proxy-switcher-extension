@@ -49,6 +49,12 @@ for (const id of TARGET_IDS) {
     assert('package', `${id} ships no build tooling`,
         !entries.some(e => e.name.startsWith('scripts/') || e.name.startsWith('node_modules/') || e.name.startsWith('.git')));
 
+    // Line endings are part of the package bytes: a CRLF checkout would ship a
+    // different archive than an LF one, so text files must arrive normalized.
+    const crlf = entries.filter(e => /\.(?:js|json|html|css|svg)$/.test(e.name) && e.data.includes('\r'))
+        .map(e => e.name);
+    assert('package', `${id} text files are LF normalized`, crlf.length === 0, `CRLF found in: ${crlf.join(', ')}`);
+
     if (target.engine === 'gecko') {
         assert('package', 'firefox uses background.scripts',
             manifest.background.scripts?.[0] === 'assets/js/sw.js' && !manifest.background.service_worker);

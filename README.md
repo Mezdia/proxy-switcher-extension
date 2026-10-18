@@ -226,7 +226,10 @@ npm run build -- --target=firefox
 npm run check                 # packaging, i18n, archives and cross-engine routing parity
 ```
 
-Artifacts are deterministic (sorted entries, fixed timestamps, no absolute paths):
+Artifacts are reproducible: entries are sorted, timestamps are pinned to 1980-01-01, no absolute
+path enters the archive, and `.gitattributes` keeps every packaged text file LF — a Windows build
+and the Linux CI build produce the same SHA-256 today, which `npm run check` guards by refusing any
+package whose text files carry CRLF.
 
 ```
 dist/packages/mezdia-proxy-switcher-chrome-v5.0.0.zip
@@ -249,7 +252,7 @@ GECKO_ADDON_ID=<id-of-your-listing> npm run build
 ## Checks
 
 ```
-npm run check            # 79 assertions: packages, manifests, archives, locales, engine parity
+npm run check            # 82 assertions: packages, manifests, archives, locales, engine parity
 npm run verify:firefox   # boots dist/firefox in a real Firefox and reads what reached the wire
 npm run lint:firefox     # the same validator AMO runs
 ```

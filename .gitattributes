@@ -1,0 +1,11 @@
+# Line endings decide package bytes: a CRLF checkout ships different archives
+# than an LF one, so every text file is normalized to LF in the working tree too.
+* text=auto eol=lf
+
+*.png binary
+*.gif binary
+*.jpg binary
+*.ico binary
+*.mp4 binary
+*.woff binary
+*.woff2 binary
