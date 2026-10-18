@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to release, e.g. v5.0.0
+        required: true
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish per-browser packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install tooling
+        run: npm ci
+
+      - name: Resolve the release tag and commit
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          COMMIT="$(git rev-parse "refs/tags/${TAG}^{commit}")"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "commit=${COMMIT}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG} commit=${COMMIT} version=${VERSION}"
+
+      - name: Refuse to publish when the tag and the manifest disagree
+        run: |
+          MANIFEST_VERSION="$(node -p "require('./manifest.json').version")"
+          if [ "$MANIFEST_VERSION" != "${{ steps.tag.outputs.version }}" ]; then
+            echo "manifest.json says ${MANIFEST_VERSION}, tag says ${{ steps.tag.outputs.version }}"
+            exit 1
+          fi
+
+      - name: Build
+        run: node scripts/build.mjs
+
+      - name: Verify packages and cross-engine routing parity
+        run: node scripts/check.mjs
+
+      - name: Validate the Firefox package the way AMO does
+        run: npx web-ext lint --source-dir dist/firefox
+
+      - name: Verify the built Firefox package in a real Firefox
+        run: xvfb-run -a node scripts/verify-firefox.mjs
+
+      - name: Checksums
+        run: |
+          cd dist/packages
+          sha256sum mezdia-proxy-switcher-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          COMMIT: ${{ steps.tag.outputs.commit }}
+        run: |
+          cat > notes.md <<'NOTES'
+          Per-browser packages for this version, produced by the `Release` workflow.
+
+          | Browser | Engine | Package | Install |
+          |---|---|---|---|
+          | Chrome, Chromium, Brave, Vivaldi, Opera, Edge-compatible Chromium builds | Blink | `chrome` zip | Load unpacked from the extracted folder, or the Chrome Web Store listing |
+          | Microsoft Edge | Blink | `edge` zip | Load unpacked, or the Edge Add-ons listing |
+          | Firefox desktop 121+ | Gecko | `firefox` xpi | The Firefox Add-ons listing; unsigned builds need temporary/developed installs |
+
+          SOCKS5 credentials travel inside the proxy configuration on every engine. On Firefox the
+          Mezdia tab group cannot be named, so the group this extension creates is the group it proxies.
+
+          Checksums: `SHA256SUMS.txt`.
+          NOTES
+          if gh release create "$TAG" \
+               --target "$COMMIT" \
+               --title "Mezdia Proxy Switcher $TAG" \
+               --notes-file notes.md \
+               --verify-tag 2>create-error.txt; then
+            echo "created release for $TAG"
+          else
+            echo "could not create the release: $(cat create-error.txt)"
+            echo "updating the existing release instead"
+            gh release edit "$TAG" --title "Mezdia Proxy Switcher $TAG" --notes-file notes.md
+          fi
+
+      - name: Attach every browser package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: gh release upload "$TAG" dist/packages/* --clobber
+
+      - name: Show the published assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: gh release view "$TAG" --json assets --jq '.assets[] | "\(.name)  \(.size) bytes  \(.url)"'

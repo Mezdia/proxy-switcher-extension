@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  packages:
+    name: Package every browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install tooling
+        run: npm ci
+
+      - name: Build chrome / edge / firefox
+        run: node scripts/build.mjs
+
+      - name: Verify packages and cross-engine routing parity
+        run: node scripts/check.mjs
+
+      - name: Validate the Firefox package the way AMO does
+        run: npx web-ext lint --source-dir dist/firefox
+
+      - name: Verify the built Firefox package in a real Firefox
+        run: xvfb-run -a node scripts/verify-firefox.mjs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: dist/packages/
+          if-no-files-found: error

@@ -1,0 +1,200 @@
+{
+  "recordedFrom": {
+    "revision": "122cdb493b8f9e18279e20c5097d698334cc220d",
+    "command": "git show <rev>:assets/js/sw.js through scripts/harness.mjs"
+  },
+  "cases": [
+    {
+      "name": "all-no-exclusions",
+      "scope": "all",
+      "proxy": {
+        "ip": "10.0.0.1",
+        "port": "8080",
+        "user": "",
+        "pass": "",
+        "protocol": "http"
+      },
+      "exclude_urls": "[]",
+      "group_tabs": [],
+      "other_tabs": [
+        {
+          "url": "https://elsewhere.test/",
+          "title": "Elsewhere"
+        }
+      ],
+      "decisions": {
+        "http://example.com/": "PROXY 10.0.0.1:8080",
+        "https://a.b.c/x": "PROXY 10.0.0.1:8080",
+        "http://localhost:3000/": "PROXY 10.0.0.1:8080",
+        "https://EXAMPLE.COM/Up/Case": "PROXY 10.0.0.1:8080"
+      }
+    },
+    {
+      "name": "all-domain-exclusions",
+      "scope": "all",
+      "proxy": {
+        "ip": "192.168.1.10",
+        "port": "3128",
+        "user": "",
+        "pass": "",
+        "protocol": "http"
+      },
+      "exclude_urls": "[\"skip.com\",\"other.test\"]",
+      "group_tabs": [],
+      "other_tabs": [],
+      "decisions": {
+        "http://skip.com/": "DIRECT",
+        "http://sub.skip.com/x": "DIRECT",
+        "https://deep.sub.skip.com/y": "DIRECT",
+        "http://notskip.com/x": "PROXY 192.168.1.10:3128",
+        "http://other.test/z": "DIRECT"
+      }
+    },
+    {
+      "name": "all-pattern-exclusions",
+      "scope": "all",
+      "proxy": {
+        "ip": "192.168.1.10",
+        "port": "3128",
+        "user": "",
+        "pass": "",
+        "protocol": "http"
+      },
+      "exclude_urls": "[\"*://ads.example/*\",\"http://cdn.example/imgs/?.png\",\"direct.host:8000\"]",
+      "group_tabs": [],
+      "other_tabs": [],
+      "decisions": {
+        "https://ads.example/one": "DIRECT",
+        "http://cdn.example/imgs/a.png": "DIRECT",
+        "http://cdn.example/imgs/ab.png": "PROXY 192.168.1.10:3128",
+        "http://ok.example/": "PROXY 192.168.1.10:3128",
+        "http://direct.host/x": "PROXY 192.168.1.10:3128"
+      }
+    },
+    {
+      "name": "group-basic",
+      "scope": "group",
+      "proxy": {
+        "ip": "10.8.0.5",
+        "port": "1080",
+        "user": "socks-user",
+        "pass": "socks-pass",
+        "protocol": "socks5"
+      },
+      "exclude_urls": "[]",
+      "group_tabs": [
+        {
+          "url": "https://app.example/",
+          "title": "App"
+        },
+        {
+          "url": "https://cdn.example/assets/a.css",
+          "title": "Assets"
+        }
+      ],
+      "other_tabs": [
+        {
+          "url": "https://private.test/",
+          "title": "Private"
+        }
+      ],
+      "decisions": {
+        "https://app.example/x": "SOCKS5 10.8.0.5:1080; SOCKS 10.8.0.5:1080",
+        "https://sub.app.example/y": "SOCKS5 10.8.0.5:1080; SOCKS 10.8.0.5:1080",
+        "https://cdn.example/z": "SOCKS5 10.8.0.5:1080; SOCKS 10.8.0.5:1080",
+        "https://private.test/w": "DIRECT",
+        "https://elsewhere.test/": "DIRECT"
+      }
+    },
+    {
+      "name": "group-with-exclusions",
+      "scope": "group",
+      "proxy": {
+        "ip": "127.0.0.53",
+        "port": "8888",
+        "user": "tls-user",
+        "pass": "tls-pass",
+        "protocol": "https"
+      },
+      "exclude_urls": "[\"mail.example\"]",
+      "group_tabs": [
+        {
+          "url": "https://app.example/",
+          "title": "App"
+        },
+        {
+          "url": "https://mail.example/",
+          "title": "Mail"
+        }
+      ],
+      "other_tabs": [],
+      "decisions": {
+        "https://app.example/x": "HTTPS 127.0.0.53:8888",
+        "https://mail.example/inbox": "DIRECT",
+        "https://sub.mail.example/y": "DIRECT",
+        "https://random.test/": "DIRECT"
+      }
+    },
+    {
+      "name": "group-empty",
+      "scope": "group",
+      "proxy": {
+        "ip": "10.0.0.9",
+        "port": "8080",
+        "user": "",
+        "pass": "",
+        "protocol": "http"
+      },
+      "exclude_urls": "[]",
+      "group_tabs": [],
+      "other_tabs": [
+        {
+          "url": "https://only-regular.test/",
+          "title": "Regular"
+        }
+      ],
+      "decisions": {
+        "https://only-regular.test/": "DIRECT",
+        "https://anything.example/": "DIRECT"
+      }
+    },
+    {
+      "name": "uppercase-exclusion",
+      "scope": "all",
+      "proxy": {
+        "ip": "10.0.0.1",
+        "port": "8080",
+        "user": "",
+        "pass": "",
+        "protocol": "http"
+      },
+      "exclude_urls": "[\"EXAMPLE.COM\"]",
+      "group_tabs": [],
+      "other_tabs": [],
+      "decisions": {
+        "http://example.com/": "PROXY 10.0.0.1:8080",
+        "http://EXAMPLE.com/": "PROXY 10.0.0.1:8080",
+        "http://sub.EXAMPLE.com/": "PROXY 10.0.0.1:8080"
+      }
+    },
+    {
+      "name": "idn-and-ports",
+      "scope": "all",
+      "proxy": {
+        "ip": "10.0.0.1",
+        "port": "8080",
+        "user": "",
+        "pass": "",
+        "protocol": "http"
+      },
+      "exclude_urls": "[\"xn--fiqs8s.test\",\"127.0.0.1\"]",
+      "group_tabs": [],
+      "other_tabs": [],
+      "decisions": {
+        "http://xn--fiqs8s.test/": "DIRECT",
+        "http://127.0.0.1:3000/": "DIRECT",
+        "http://[::1]:3000/": "PROXY 10.0.0.1:8080"
+      }
+    }
+  ]
+}

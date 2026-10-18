@@ -1,0 +1,20 @@
+{
+    "name": "mezdia-proxy-switcher",
+    "version": "5.0.0",
+    "private": true,
+    "description": "Mezdia Proxy Switcher — cross-browser build tooling for the Manifest V3 extension",
+    "type": "module",
+    "scripts": {
+        "build": "node scripts/build.mjs",
+        "check": "node scripts/check.mjs",
+        "lint:firefox": "web-ext lint --source-dir dist/firefox",
+        "run:firefox": "web-ext run --source-dir dist/firefox --temp-profile --browser-console --no-reload",
+        "verify:firefox": "node scripts/verify-firefox.mjs"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "devDependencies": {
+        "web-ext": "^8.10.0"
+    }
+}
