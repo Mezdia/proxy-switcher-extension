@@ -363,12 +363,18 @@ function buildAllTabsPacScript(proxyHost, proxyPort, protocol, excludeEntries) {
 /* ── Gecko proxy engine ──
    proxy.onRequest is the stand-in for the PAC script: returning null drops the
    proxy for that request (PAC "DIRECT"), an object applies it, and undefined
-   leaves whatever the browser itself configured in charge. */
+   leaves whatever the browser itself configured in charge.
+
+   Unlike the Blink PAC — which the browser keeps even while the extension is
+   asleep — this policy lives in the background script, so it is mirrored into
+   storage and awaited before the first request is answered after a wake-up. */
 
 const SH_EXP_SPECIALS = /[.+^${}()|[\]\\]/g;
+const GECKO_POLICY_KEY = 'gecko_policy';
 
 let geckoPolicy = null;
 let geckoListenerInstalled = false;
+let geckoRestore = null;
 
 function toShellRegExp(pattern) {
     return new RegExp(`^${pattern.replace(SH_EXP_SPECIALS, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.')}$`);
@@ -396,27 +402,36 @@ function geckoProxyInfo({ip, port, protocol, user, pass}) {
     return info;
 }
 
-function installGeckoPolicy({proxyInfo, domains = [], patterns = [], allowDomains = null}) {
-    geckoPolicy = {proxyInfo, domains, patterns: patterns.map(toShellRegExp), allowDomains};
-
-    if (geckoListenerInstalled) return;
-    chrome.proxy.onRequest.addListener(geckoOnRequest, {urls: ['<all_urls>']});
-    geckoListenerInstalled = true;
+function compileGeckoPolicy({proxyInfo, domains = [], patterns = [], allowDomains = null}) {
+    return {proxyInfo, domains, patterns: patterns.map(toShellRegExp), allowDomains};
 }
 
-function geckoOnRequest(details) {
+async function restoreGeckoPolicy() {
+    const stored = await chrome.storage.local.get(GECKO_POLICY_KEY);
+    let snapshot = null;
+    try {
+        snapshot = stored[GECKO_POLICY_KEY] ? JSON.parse(stored[GECKO_POLICY_KEY]) : null;
+    } catch {
+        snapshot = null;
+    }
+
+    if (snapshot && snapshot.proxyInfo) geckoPolicy = compileGeckoPolicy(snapshot);
+    return geckoPolicy;
+}
+
+function decideGecko(url) {
     const policy = geckoPolicy;
     if (!policy) return undefined;
 
     let host;
     try {
-        host = new URL(details.url).hostname;
+        host = new URL(url).hostname;
     } catch {
         return undefined;
     }
 
     for (const pattern of policy.patterns) {
-        if (pattern.test(details.url) || pattern.test(host)) return null;
+        if (pattern.test(url) || pattern.test(host)) return null;
     }
     for (const domain of policy.domains) {
         if (hostInDomain(host, domain)) return null;
@@ -428,8 +443,34 @@ function geckoOnRequest(details) {
     return {...policy.proxyInfo};
 }
 
+async function geckoOnRequest(details) {
+    if (!geckoPolicy) {
+        geckoRestore = restoreGeckoPolicy().finally(() => {
+            geckoRestore = null;
+        });
+        await geckoRestore;
+    }
+
+    return decideGecko(details.url);
+}
+
+async function installGeckoPolicy(policy) {
+    geckoPolicy = compileGeckoPolicy(policy);
+    await chrome.storage.local.set({[GECKO_POLICY_KEY]: JSON.stringify({
+        proxyInfo: policy.proxyInfo,
+        domains: policy.domains ?? [],
+        patterns: policy.patterns ?? [],
+        allowDomains: policy.allowDomains ?? null,
+    })});
+
+    if (geckoListenerInstalled) return;
+    chrome.proxy.onRequest.addListener(geckoOnRequest, {urls: ['<all_urls>']});
+    geckoListenerInstalled = true;
+}
+
 function clearGeckoPolicy() {
     geckoPolicy = null;
+    chrome.storage.local.remove(GECKO_POLICY_KEY).catch(() => {});
     if (!geckoListenerInstalled) return;
 
     chrome.proxy.onRequest.removeListener(geckoOnRequest);
@@ -461,7 +502,7 @@ async function applyProxy({ip, port, user = '', pass = '', protocol = 'http'}, w
     }
 
     if (GECKO_PROXY) {
-        installGeckoPolicy({
+        await installGeckoPolicy({
             proxyInfo: geckoProxyInfo({ip: proxyHost, port: proxyPort, protocol: normalizedProtocol, user, pass}),
             ...classifyExcludeEntries(entries),
             allowDomains,

@@ -202,6 +202,7 @@ hands it to whichever engine it is running in:
 | **Where the policy lives** | An inline PAC script written with `proxy.settings.set({mode: "pac_script"})`. | A `proxy.onRequest` listener that answers per request. Gecko has no API for inline PAC — `pacScript.data` does not exist there. |
 | **"Connect directly"** | The PAC returns `DIRECT`. | The listener returns `null`, which clears the proxy for that request. (`{type: "direct"}` would not: it falls back to the browser's own configuration.) |
 | **Disabled state** | `proxy.settings.clear()`. | The listener is unregistered, so requests fall back to whatever the browser was already doing. |
+| **Background asleep** | The PAC stays installed in the browser settings, so a sleeping extension still routes. | The policy lives in the script, so it is mirrored into storage and `proxy.onRequest` awaits that snapshot before answering the first request after a wake-up — a request is never answered as if no proxy existed. |
 | **HTTP(S) proxy login** | `webRequest.onAuthRequired` answers the `407` challenge. | Identical — the same listener answers it. A `Proxy-Authorization` header smuggled into the proxy record is ignored by Gecko, measured on the wire. |
 | **SOCKS5 login** | `webRequest.onAuthRequired`. | Carried in the proxy record itself (`username`/`password`), and Gecko negotiates SOCKS5 username/password auth with it. |
 | **Tab groups** | `tabGroups` finds the group named `Mezdia`. | No `tabGroups` API; `tabs.group` works, so the created group is remembered by id. |
@@ -252,7 +253,7 @@ GECKO_ADDON_ID=<id-of-your-listing> npm run build
 ## Checks
 
 ```
-npm run check            # 82 assertions: packages, manifests, archives, locales, engine parity
+npm run check            # 87 assertions: packages, manifests, archives, locales, engine parity
 npm run verify:firefox   # boots dist/firefox in a real Firefox and reads what reached the wire
 npm run lint:firefox     # the same validator AMO runs
 ```

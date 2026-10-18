@@ -50,6 +50,10 @@ export function createRuntime(engine, {tabs = [], storage = {}, sourceFile = pat
                 Object.assign(store, JSON.parse(JSON.stringify(values)));
                 return promise(undefined);
             },
+            remove: keys => {
+                for (const key of Array.isArray(keys) ? keys : [keys]) delete store[key];
+                return promise(undefined);
+            },
         }},
         runtime: {
             id: 'fake-extension',
@@ -155,10 +159,10 @@ export function createRuntime(engine, {tabs = [], storage = {}, sourceFile = pat
         calls,
         store,
         /** Ask the Gecko policy engine how a URL would be routed. */
-        routeUrl: url => {
+        routeUrl: async url => {
             if (engine !== 'gecko') throw new Error('routeUrl is gecko-only');
             if (!onRequestListener) throw new Error('no proxy.onRequest listener is installed');
-            return onRequestListener({url});
+            return await onRequestListener({url});
         },
         flushTimers: () => {
             const pending = calls.timers.splice(0, calls.timers.length);

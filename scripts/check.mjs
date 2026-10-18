@@ -224,7 +224,7 @@ for (const testCase of golden.cases) {
         const actualPac = evaluatePac(pac, url);
         if (actualPac !== decision) failures.push(`PAC ${url}: got ${actualPac}, golden ${decision}`);
 
-        const geckoResult = gecko.routeUrl(url);
+        const geckoResult = await gecko.routeUrl(url);
         if (decision === 'DIRECT') {
             if (geckoResult !== null) failures.push(`gecko ${url}: got ${JSON.stringify(geckoResult)}, expected null (direct)`);
         } else if (!equals(geckoResult, want)) {
@@ -284,7 +284,40 @@ for (const testCase of golden.cases) {
         replies.filter(r => r !== undefined).length >= actions.length - 1, JSON.stringify(replies));
 }
 
-/* ── 7. Version bookkeeping ── */
+/* ── 7. A woken Gecko background must not answer before it knows the policy ── */
+
+{
+    const storage = {
+        proxy_scope: 'all',
+        exclude_urls: JSON.stringify(['skip.example']),
+        proxy_current: '',
+    };
+    const warm = createRuntime('gecko', {tabs: [], storage});
+    await warm.sandbox.applyProxy({ip: '10.0.0.1', port: '8080', protocol: 'http', user: '', pass: ''}, false);
+
+    const snapshot = JSON.parse(warm.store['gecko_policy'] ?? 'null');
+    assert('gecko wake-up', 'the policy is mirrored into storage',
+        snapshot?.proxyInfo?.host === '10.0.0.1' && snapshot?.domains?.join() === 'skip.example',
+        JSON.stringify(warm.store['gecko_policy']));
+
+    // A woken background holds the persistent filter but no in-memory policy:
+    // nothing may be claimed until the snapshot has been read back.
+    const cold = createRuntime('gecko', {tabs: [], storage: {...storage, gecko_policy: warm.store['gecko_policy']}});
+    assert('gecko wake-up', 'nothing is claimed before the snapshot is read',
+        cold.sandbox.decideGecko('http://included.example/x') === undefined);
+    await cold.sandbox.restoreGeckoPolicy();
+    assert('gecko wake-up', 'included host routes after the snapshot is read',
+        equals(cold.sandbox.decideGecko('http://included.example/x'), {type: 'http', host: '10.0.0.1', port: 8080}),
+        JSON.stringify(cold.sandbox.decideGecko('http://included.example/x')));
+    assert('gecko wake-up', 'excluded host still bypasses after the snapshot is read',
+        cold.sandbox.decideGecko('http://skip.example/x') === null);
+
+    warm.sandbox.disableProxy();
+    assert('gecko wake-up', 'disabling clears the stored snapshot', !('gecko_policy' in warm.store),
+        JSON.stringify(warm.store['gecko_policy']));
+}
+
+/* ── 8. Version bookkeeping ── */
 
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
 assert('version', 'package.json matches the manifest', pkg.version === source.version,
